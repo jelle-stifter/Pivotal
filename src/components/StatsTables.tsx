@@ -12,6 +12,8 @@ import type { ActionType } from '../types'
 export interface TotalsRow {
   key: string
   label: string
+  /** Optional link target for the label (e.g. a player page). */
+  href?: string
   sub?: string
   totals: Totals
   /** Matches played; only used when `showMatches` is set (season view). */
@@ -80,7 +82,15 @@ export function TotalsTable({
         <tbody>
           {rows.map((r) => (
             <tr key={r.key}>
-              <td className="font-semibold">{r.label}</td>
+              <td className="font-semibold">
+                {r.href ? (
+                  <a href={r.href} className="no-underline hover:underline" style={{ color: 'inherit' }}>
+                    {r.label}
+                  </a>
+                ) : (
+                  r.label
+                )}
+              </td>
               {showTeam && <td>{r.sub}</td>}
               {cells(r.totals, r.matches)}
             </tr>

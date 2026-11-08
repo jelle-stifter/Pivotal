@@ -177,7 +177,13 @@ export default function SeasonPage() {
                 />
               </>
             ) : (
-              <SummaryCard label="Doelpunten totaal" value={String(goalsTotal)} />
+              <>
+                <SummaryCard label="Doelpunten totaal" value={String(goalsTotal)} />
+                <SummaryCard
+                  label="Gemiddeld per wedstrijd"
+                  value={(goalsTotal / Math.max(selected.length, 1)).toFixed(1)}
+                />
+              </>
             )}
           </section>
 
@@ -246,6 +252,7 @@ export default function SeasonPage() {
                 return {
                   key: r.playerId,
                   label: p ? `#${p.number} ${p.name}` : '?',
+                  href: `#/player/${r.playerId}`,
                   sub: p ? teamName(p.teamId) : '',
                   totals: r.totals,
                   matches: r.matches,
@@ -275,9 +282,9 @@ export default function SeasonPage() {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="card text-center">
-      <div className="text-sm text-slate-600">{label}</div>
-      <div className="text-3xl font-black tabular-nums">{value}</div>
+    <div className="tile">
+      <div className="tile-label">{label}</div>
+      <div className="tile-value">{value}</div>
     </div>
   )
 }

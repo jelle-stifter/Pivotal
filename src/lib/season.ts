@@ -93,7 +93,7 @@ export function matchResults(
     const own = actions.filter((a) => a.matchId === m.id)
     const s = score(own, m.homeTeamId, m.awayTeamId)
     const half =
-      m.format === 2
+      m.format === 2 && own.some((a) => a.period >= 2)
         ? scoreByPeriod(own, m.homeTeamId, m.awayTeamId, 1)[0]
         : null
     const r: MatchResult = {

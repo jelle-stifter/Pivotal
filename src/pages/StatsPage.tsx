@@ -5,6 +5,10 @@ import { ACTION_META } from '../lib/actions'
 import { actionsCsv, csvFileName, playerStatsCsv } from '../lib/csv'
 import { downloadText } from '../lib/download'
 import Court, { CourtLegend } from '../components/Court'
+import CompareBars from '../components/CompareBars'
+import ScoreFlow from '../components/ScoreFlow'
+import ScoreHero from '../components/ScoreHero'
+import { biggestLead, compareRows, scoreTimeline, topScorers } from '../lib/analysis'
 import { KeeperTable, TotalsTable } from '../components/StatsTables'
 import { hasPosition } from '../lib/court'
 import { heatGrid } from '../lib/heat'
@@ -15,6 +19,7 @@ import {
   goalsWithoutKeeper,
   playerTotals,
   score,
+  scoreByPeriod,
   teamTotals,
   visibleTypes,
   emptyTotals,
@@ -93,6 +98,9 @@ function StatsScreen({
   const matchTeams = [match.homeTeamId, match.awayTeamId]
   const filtered = filterActions(actions, filter)
   const result = score(actions, match.homeTeamId, match.awayTeamId)
+  const timeline = scoreTimeline(actions, match.homeTeamId, match.awayTeamId)
+  const lead = biggestLead(timeline)
+  const scorers = topScorers(actions, 3)
 
   // Heatmap: the filtered actions that carry a court position (older actions
   // and keyboard-only entries have none and are simply not drawn).
@@ -175,29 +183,72 @@ function StatsScreen({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h2 className="page-title">
-          Statistieken · {teamName(match.homeTeamId)} –{' '}
-          {teamName(match.awayTeamId)}
-        </h2>
-        <div className="flex gap-4 text-sm font-semibold">
-          <a href={`#/match/${match.id}`} className="underline">
+      <div className="flex flex-wrap items-center justify-between gap-3 no-print">
+        <h2 className="page-title">Wedstrijd</h2>
+        <div className="flex gap-2 text-sm font-semibold">
+          <a href={`#/match/${match.id}`} className="btn inline-flex items-center no-underline">
             Live
           </a>
-          <a href="#/matches" className="underline">
+          <a href="#/matches" className="btn inline-flex items-center no-underline">
             ← Wedstrijden
           </a>
         </div>
       </div>
 
-      <section className="card text-center" aria-label="Eindstand">
-        <div className="text-sm text-slate-600">Stand</div>
-        <div className="text-4xl font-black tabular-nums">
-          {result.home} – {result.away}
-        </div>
-      </section>
+      <ScoreHero
+        homeName={teamName(match.homeTeamId)}
+        awayName={teamName(match.awayTeamId)}
+        homeGoals={result.home}
+        awayGoals={result.away}
+        date={match.date}
+        location={match.location}
+        half={match.format === 2 && actions.some((a) => a.period >= 2) ? scoreByPeriod(actions, match.homeTeamId, match.awayTeamId, 1)[0] : null}
+      />
 
-      <section className="card" aria-label="Export">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="card" aria-label="Vergelijking">
+          <h3 className="section-title mb-3">Vergelijking</h3>
+          <CompareBars
+            rows={compareRows(actions, match.homeTeamId, match.awayTeamId)}
+            homeName={teamName(match.homeTeamId)}
+            awayName={teamName(match.awayTeamId)}
+          />
+        </section>
+        <section className="card" aria-label="Scoreverloop">
+          <h3 className="section-title mb-3">Scoreverloop</h3>
+          <ScoreFlow
+            points={timeline}
+            homeName={teamName(match.homeTeamId)}
+            awayName={teamName(match.awayTeamId)}
+            boundaries={match.format === 2 ? [30 * 60_000] : [20 * 60_000, 40 * 60_000]}
+          />
+          <h3 className="section-title mb-1 mt-5">Topscorers</h3>
+          {scorers.length === 0 ? (
+            <p className="text-sm text-slate-500">Nog geen doelpunten.</p>
+          ) : (
+            scorers.map((sc, i) => {
+              const p = players.find((x) => x.id === sc.playerId)
+              return (
+                <a key={sc.playerId} href={`#/player/${sc.playerId}`} className="bar-row no-underline" style={{ color: 'inherit' }}>
+                  <span className={`rank ${i === 0 ? 'rank-1' : ''}`}>{i + 1}</span>
+                  <span className="truncate font-semibold">
+                    {p ? `#${p.number} ${p.name}` : '?'}
+                    <span className="block text-xs font-normal text-slate-500">{p ? teamName(p.teamId) : ''}</span>
+                  </span>
+                  <span className="bar-track"><span className="bar-fill block" style={{ width: `${(sc.total / scorers[0].total) * 100}%` }} /></span>
+                  <span className="text-right font-bold tabular-nums">{sc.total}</span>
+                </a>
+              )
+            })
+          )}
+          <p className="mt-3 text-sm text-slate-600">
+            Grootste voorsprong: {teamName(match.homeTeamId)} +{lead.home},{' '}
+            {teamName(match.awayTeamId)} +{lead.away}.
+          </p>
+        </section>
+      </div>
+
+      <section className="card no-print" aria-label="Export">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="section-title">Export</h3>

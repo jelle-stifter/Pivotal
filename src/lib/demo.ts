@@ -302,7 +302,8 @@ export function buildDemo(date: string, now: number): DemoData {
       type: d.type,
       period: times[i] < 1_800_000 ? 1 : 2,
       matchClockMs: times[i],
-      createdAt: now + index * 1000 + i,
+      // Demo matches are "finished": logged at least 6 hours before `now`.
+      createdAt: now - (cfg.daysBefore * 24 + 6) * 3_600_000 + index * 1000 + i,
       videoTimeMs: null,
       x: d.x,
       y: d.y,

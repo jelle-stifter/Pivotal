@@ -40,8 +40,10 @@ De app werkt daarna volledig **offline**. Nieuwe versies worden automatisch opge
 
 ## Gebruik
 
+0. **Overzicht**: startscherm met de uitgelichte of live wedstrijd, topscorers, laatste wedstrijden en back-up.
 1. **Teams**: maak teams aan en voeg spelers toe (rugnummer, naam, positie, keeper).
-   Rugnummers zijn uniek per team.
+   Rugnummers zijn uniek per team. Onder "Spelerslijst plakken" importeer je een hele lijst in één keer
+   (`nummer;naam;positie;K`, ook rechtstreeks uit Excel te plakken).
 2. **Wedstrijden**: maak een wedstrijd (thuis, uit, datum, plaats) en kies 2 helften of 3 derden.
 3. **Live**: registreer acties met toetsenbord of muis.
 4. **Statistieken**: filter op team, speler, actie en periode. Exporteer naar CSV.
@@ -74,6 +76,16 @@ Een save zonder gekozen speler wordt toegekend aan de keeper op het veld. Stel p
 
 - **Seizoen** (menu bovenaan): kies een seizoen (augustus–juli) en eventueel een team. Je ziet de uitslagen met ruststand en winst/gelijk/verlies, de totalen per speler over alle wedstrijden (met wedstrijden gespeeld en goals per wedstrijd) en de keepers. Met **Spelers (CSV)** exporteer je de seizoenstotalen.
 - **Wedstrijdblad**: onder Statistieken van een wedstrijd staat **Wedstrijdblad (afdrukken)**: stand, ruststand, een tabel per team en de keepers, ingericht voor A4 liggend. Gebruik **Afdrukken / PDF** en kies "Opslaan als PDF" om er een PDF van te maken.
+
+### Statistiekenscherm en spelerspagina
+
+- Bovenaan staat de scorekop met eindstand en ruststand, daarna een **vergelijking** van beide teams (balken) en het **scoreverloop** met de topscorers van de wedstrijd.
+- Klik op een speler (Overzicht, Seizoen of topscorers) voor de **spelerspagina**: totalen, schot% of stop%, heatmap per actie en alle wedstrijden.
+- Een wedstrijd telt als **live** zolang de laatste actie minder dan 3 uur geleden is. Live wedstrijden staan op het Overzicht en hebben een badge in de lijst.
+
+### Back-up
+
+Op het Overzicht staat **Back-up maken** (JSON-bestand met alles) en **Back-up terugzetten**. Terugzetten vervangt alle gegevens in deze browser; het bestand wordt eerst gecontroleerd. Zo neem je gegevens ook mee naar een ander apparaat.
 
 ### CSV-export
 

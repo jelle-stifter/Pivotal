@@ -40,6 +40,9 @@ export default function ActionList({
   onDelete,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [showAll, setShowAll] = useState(false)
+  const LIMIT = 15
+  const visible = showAll ? actions : actions.slice(0, LIMIT)
   const playerById = new Map(players.map((p) => [p.id, p]))
   const who = (id: string) => {
     const p = playerById.get(id)
@@ -63,7 +66,7 @@ export default function ActionList({
           </tr>
         </thead>
         <tbody>
-          {actions.map((a) =>
+          {visible.map((a) =>
             a.id === editingId ? (
               <EditRow
                 key={a.id}
@@ -116,6 +119,15 @@ export default function ActionList({
           )}
         </tbody>
       </table>
+      {actions.length > LIMIT && (
+        <div className="mt-3 text-center">
+          <button className="btn" onClick={() => setShowAll((v) => !v)}>
+            {showAll
+              ? `Alleen de laatste ${LIMIT} tonen`
+              : `Toon alle ${actions.length} acties`}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

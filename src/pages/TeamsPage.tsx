@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { repo } from '../db/repo'
+import { parseRoster } from '../lib/roster'
 import type { Player } from '../types'
 
 function errorMessage(e: unknown) {
@@ -169,6 +170,7 @@ function TeamDetail({
           <NewPlayerRow teamId={teamId} run={run} />
         </tbody>
       </table>
+      <RosterImport teamId={teamId} existing={players?.map((p) => p.number) ?? []} run={run} />
     </div>
   )
 }
@@ -335,5 +337,73 @@ function NewPlayerRow({ teamId, run }: { teamId: string; run: Run }) {
         </form>
       </td>
     </tr>
+  )
+}
+
+function RosterImport({
+  teamId,
+  existing,
+  run,
+}: {
+  teamId: string
+  existing: number[]
+  run: Run
+}) {
+  const [text, setText] = useState('')
+  const [report, setReport] = useState<string[]>([])
+  const parsed = parseRoster(text)
+
+  async function doImport() {
+    const problems = [...parsed.errors]
+    let added = 0
+    for (const e of parsed.entries) {
+      if (existing.includes(e.number)) {
+        problems.push(`Rugnummer ${e.number} (${e.name}) bestaat al in dit team en is overgeslagen.`)
+        continue
+      }
+      await run(() => repo.addPlayer({ teamId, ...e }))
+      added++
+    }
+    setReport([`${added} speler${added === 1 ? '' : 's'} toegevoegd.`, ...problems])
+    if (problems.length === parsed.errors.length) setText('')
+  }
+
+  return (
+    <details className="rounded-lg border border-slate-200 p-3">
+      <summary className="cursor-pointer font-semibold">
+        Spelerslijst plakken (bijv. uit Excel)
+      </summary>
+      <p className="mt-2 text-sm text-slate-600">
+        Eén speler per regel: <code>nummer;naam;positie;K</code>. De laatste twee
+        mogen leeg. Tab, komma of puntkomma werken, dus je kunt kolommen uit
+        Excel direct plakken.
+      </p>
+      <textarea
+        className="field mt-2 h-32 w-full py-2 font-mono text-sm"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={'1;Daan de Vries;Keeper;K\n7;Jesse Visser;Linksbuiten'}
+        aria-label="Spelerslijst"
+      />
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <button
+          className="btn btn-primary"
+          disabled={parsed.entries.length === 0}
+          onClick={() => void doImport()}
+        >
+          {parsed.entries.length} speler{parsed.entries.length === 1 ? '' : 's'} importeren
+        </button>
+        {parsed.errors.length > 0 && (
+          <span className="text-sm text-amber-700">{parsed.errors.length} regel(s) met fout</span>
+        )}
+      </div>
+      {report.length > 0 && (
+        <ul className="mt-2 list-disc pl-5 text-sm text-slate-700" role="status">
+          {report.map((r) => (
+            <li key={r}>{r}</li>
+          ))}
+        </ul>
+      )}
+    </details>
   )
 }

@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
+import { useNow } from '../hooks/useNow'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { repo } from '../db/repo'
 import { DEMO_MATCH_ID } from '../lib/demo'
 import { score } from '../lib/stats'
+import { liveMatchIds } from '../lib/analysis'
 import type { MatchFormat } from '../types'
 
 function today() {
@@ -24,6 +26,8 @@ export default function MatchesPage() {
     [],
   )
   const actions = useLiveQuery(() => db.actions.toArray(), [])
+  // Re-evaluated every minute so a match drops out of "live" by itself.
+  const now = useNow(60_000)
 
   const [homeId, setHomeId] = useState('')
   const [awayId, setAwayId] = useState('')
@@ -72,6 +76,7 @@ export default function MatchesPage() {
     teams.length === 0 &&
     matches.length === 0
 
+  const live = liveMatchIds(actions ?? [], now)
   const hasDemo = matches?.some((m) => m.id === DEMO_MATCH_ID) ?? false
 
   async function loadDemo() {
@@ -246,7 +251,14 @@ export default function MatchesPage() {
                   return (
                     <tr key={m.id}>
                       <td className="whitespace-nowrap">{formatDate(m.date)}</td>
-                      <td className="font-semibold">{label}</td>
+                      <td className="font-semibold">
+                        {label}
+                        {live.has(m.id) && (
+                          <span className="chip ml-2" style={{ background: '#fee2e2', color: '#991b1b' }}>
+                            ● Live
+                          </span>
+                        )}
+                      </td>
                       <td className="text-center font-semibold tabular-nums">
                         {s.home} – {s.away}
                       </td>

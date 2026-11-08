@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import ScoreHero from '../components/ScoreHero'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { repo } from '../db/repo'
@@ -370,43 +371,35 @@ function LiveScreen({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="page-title">
-          {teamName(match.homeTeamId)} – {teamName(match.awayTeamId)}
-        </h2>
-        <div className="flex gap-4 text-sm font-semibold">
-          <a href={`#/stats/${match.id}`} className="underline">
+        <h2 className="page-title">Live registreren</h2>
+        <div className="flex gap-2 text-sm font-semibold">
+          <a href={`#/stats/${match.id}`} className="btn inline-flex items-center no-underline">
             Statistieken
           </a>
-          <a href="#/matches" className="underline">
+          <a href="#/matches" className="btn inline-flex items-center no-underline">
             ← Wedstrijden
           </a>
         </div>
       </div>
 
       {/* Scoreboard + clock */}
-      <section className="card" aria-label="Scorebord">
-        <div className="grid items-center gap-4 text-center md:grid-cols-[1fr_auto_1fr]">
-          <div className="text-lg font-semibold md:text-right">
-            {teamName(match.homeTeamId)}
-          </div>
-          <div
-            className="text-5xl font-black tabular-nums"
-            aria-label={`Stand ${result.home} - ${result.away}`}
-          >
-            {result.home} – {result.away}
-          </div>
-          <div className="text-lg font-semibold md:text-left">
-            {teamName(match.awayTeamId)}
-          </div>
-        </div>
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3 border-t border-slate-200 pt-4">
+      <ScoreHero
+        homeName={teamName(match.homeTeamId)}
+        awayName={teamName(match.awayTeamId)}
+        homeGoals={result.home}
+        awayGoals={result.away}
+        date={match.date}
+        location={match.location}
+        live={clock.running}
+      >
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-white/15 pt-4">
           <div
             className="min-w-28 text-center text-3xl font-bold tabular-nums"
             aria-label="Wedstrijdklok"
           >
             {formatClock(clock.ms)}
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+          <span className="chip">
             {periodLabel(match.format, match.currentPeriod)}
           </span>
           <button
@@ -426,7 +419,7 @@ function LiveScreen({
             Ongedaan <span className="kbd">Ctrl+Z</span>
           </button>
         </div>
-      </section>
+      </ScoreHero>
 
       {/* Entry */}
       <section className="card space-y-4" aria-label="Invoer">
