@@ -6,6 +6,10 @@ import { repo } from '../db/repo'
 import { DEMO_MATCH_ID } from '../lib/demo'
 import { score } from '../lib/stats'
 import { liveMatchIds } from '../lib/analysis'
+import LiveLink from '../components/LiveLink'
+import ScorerPicker from '../components/ScorerPicker'
+import { useMemberships } from '../hooks/useAccess'
+import { isViewerOnly } from '../lib/access'
 import type { MatchFormat } from '../types'
 
 function today() {
@@ -28,6 +32,9 @@ export default function MatchesPage() {
   const actions = useLiveQuery(() => db.actions.toArray(), [])
   // Re-evaluated every minute so a match drops out of "live" by itself.
   const now = useNow(60_000)
+  const { list: memberships } = useMemberships()
+  // A normal player only reads: no creating, deleting or demo data.
+  const viewerOnly = isViewerOnly(memberships)
 
   const [homeId, setHomeId] = useState('')
   const [awayId, setAwayId] = useState('')
@@ -76,7 +83,11 @@ export default function MatchesPage() {
     teams.length === 0 &&
     matches.length === 0
 
-  const live = liveMatchIds(actions ?? [], now)
+  const live = liveMatchIds(
+    actions ?? [],
+    now,
+    new Set((matches ?? []).filter((m) => m.finishedAt).map((m) => m.id)),
+  )
   const hasDemo = matches?.some((m) => m.id === DEMO_MATCH_ID) ?? false
 
   async function loadDemo() {
@@ -104,7 +115,7 @@ export default function MatchesPage() {
     <div className="space-y-6">
       <h2 className="page-title">Wedstrijden</h2>
 
-      {empty && (
+      {empty && !viewerOnly && (
         <section className="card" aria-label="Demo">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -122,6 +133,7 @@ export default function MatchesPage() {
         </section>
       )}
 
+      {!viewerOnly && (
       <section className="card" aria-label="Nieuwe wedstrijd">
         <h3 className="section-title mb-4">Nieuwe wedstrijd</h3>
         {needTeams ? (
@@ -220,6 +232,7 @@ export default function MatchesPage() {
           </p>
         )}
       </section>
+      )}
 
       <section className="card" aria-label="Alle wedstrijden">
         <h3 className="section-title mb-2">Alle wedstrijden</h3>
@@ -253,6 +266,7 @@ export default function MatchesPage() {
                       <td className="whitespace-nowrap">{formatDate(m.date)}</td>
                       <td className="font-semibold">
                         {label}
+                        <ScorerPicker match={m} />
                         {live.has(m.id) && (
                           <span className="chip ml-2" style={{ background: '#fee2e2', color: '#991b1b' }}>
                             ● Live
@@ -265,13 +279,13 @@ export default function MatchesPage() {
                       <td>{m.format === 2 ? '2 helften' : '3 derden'}</td>
                       <td className="text-slate-600">{m.location ?? ''}</td>
                       <td className="whitespace-nowrap text-right">
-                        <a
-                          href={`#/match/${m.id}`}
+                        <LiveLink
+                          matchId={m.id}
                           className="btn btn-primary mr-2 inline-flex items-center no-underline"
-                          aria-label={`Open live ${label}`}
+                          label={`Open live ${label}`}
                         >
                           Live
-                        </a>
+                        </LiveLink>
                         <a
                           href={`#/stats/${m.id}`}
                           className="btn mr-2 inline-flex items-center no-underline"
@@ -279,13 +293,15 @@ export default function MatchesPage() {
                         >
                           Statistieken
                         </a>
-                        <button
-                          className="btn btn-danger"
-                          aria-label={`Verwijder wedstrijd ${label}`}
-                          onClick={() => void remove(m.id, label)}
-                        >
-                          ✕
-                        </button>
+                        {!viewerOnly && (
+                          <button
+                            className="btn btn-danger"
+                            aria-label={`Verwijder wedstrijd ${label}`}
+                            onClick={() => void remove(m.id, label)}
+                          >
+                            ✕
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )
@@ -298,7 +314,7 @@ export default function MatchesPage() {
 
       {/* Demo data next to the user's own data (the big card above only
           shows on a completely empty app). */}
-      {!empty && (
+      {!empty && !viewerOnly && (
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
           <span>
             {hasDemo

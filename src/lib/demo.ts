@@ -138,7 +138,7 @@ function daysBefore(date: string, n: number): string {
 export function buildDemo(date: string, now: number): DemoData {
   let rng: Rng = mulberry32(MATCHES[0].seed)
   const teams: Team[] = [
-    { id: 'demo-home', name: 'HV Pivotal (demo)', schemaVersion: SCHEMA_VERSION },
+    { id: 'demo-home', name: 'HV Backhand (demo)', schemaVersion: SCHEMA_VERSION },
     { id: 'demo-away', name: 'Gasten HC (demo)', schemaVersion: SCHEMA_VERSION },
   ]
   const role = new Map<string, Role>()

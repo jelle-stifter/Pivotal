@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import LiveLink from '../components/LiveLink'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { ACTION_META } from '../lib/actions'
@@ -186,9 +187,9 @@ function StatsScreen({
       <div className="flex flex-wrap items-center justify-between gap-3 no-print">
         <h2 className="page-title">Wedstrijd</h2>
         <div className="flex gap-2 text-sm font-semibold">
-          <a href={`#/match/${match.id}`} className="btn inline-flex items-center no-underline">
+          <LiveLink matchId={match.id} className="btn inline-flex items-center no-underline">
             Live
-          </a>
+          </LiveLink>
           <a href="#/matches" className="btn inline-flex items-center no-underline">
             ← Wedstrijden
           </a>

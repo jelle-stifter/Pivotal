@@ -167,7 +167,7 @@ export default function SheetPage({ matchId }: { matchId: string }) {
 
       <p className="text-center text-xs text-slate-400">
         Schot% = (goals + 7m-goals) / (goals + missers + 7m-goals + 7m gestopt +
-        7m niet op doel). Gemaakt met Pivotal.
+        7m niet op doel). Gemaakt met Backhand.
       </p>
     </div>
   )

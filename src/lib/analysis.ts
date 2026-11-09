@@ -148,12 +148,15 @@ export const LIVE_WINDOW_MS = 3 * 60 * 60 * 1000
 export function liveMatchIds(
   actions: Pick<Action, 'matchId' | 'createdAt'>[],
   now: number,
+  /** Matches ended by hand are never live. */
+  finishedIds: ReadonlySet<string> = new Set(),
 ): Set<string> {
   const latest = new Map<string, number>()
   for (const a of actions)
     latest.set(a.matchId, Math.max(latest.get(a.matchId) ?? 0, a.createdAt))
   const live = new Set<string>()
   for (const [id, t] of latest)
-    if (now - t >= 0 && now - t < LIVE_WINDOW_MS) live.add(id)
+    if (!finishedIds.has(id) && now - t >= 0 && now - t < LIVE_WINDOW_MS)
+      live.add(id)
   return live
 }

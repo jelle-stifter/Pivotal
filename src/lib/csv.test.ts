@@ -221,9 +221,9 @@ describe('playerStatsCsv', () => {
 
 describe('seasonFileName', () => {
   it('names the file after season and team', () => {
-    expect(seasonFileName('2020-2021', 'Lions 2')).toBe('pivotal-seizoen-2020-2021-Lions-2.csv')
-    expect(seasonFileName(undefined)).toBe('pivotal-seizoen-alle-seizoenen.csv')
-    expect(seasonFileName('2020-2021', 'Zoë (demo)')).toBe('pivotal-seizoen-2020-2021-Zoe-demo.csv')
+    expect(seasonFileName('2020-2021', 'Lions 2')).toBe('backhand-seizoen-2020-2021-Lions-2.csv')
+    expect(seasonFileName(undefined)).toBe('backhand-seizoen-alle-seizoenen.csv')
+    expect(seasonFileName('2020-2021', 'Zoë (demo)')).toBe('backhand-seizoen-2020-2021-Zoe-demo.csv')
   })
 })
 
@@ -269,7 +269,7 @@ describe('seasonCsv', () => {
 describe('csvFileName', () => {
   it('builds a safe file name', () => {
     expect(csvFileName(match, teams, 'acties')).toBe(
-      'pivotal-HV-Test-Gasten-HC-2026-11-08-acties.csv',
+      'backhand-HV-Test-Gasten-HC-2026-11-08-acties.csv',
     )
   })
 })

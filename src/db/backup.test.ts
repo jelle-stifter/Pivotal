@@ -37,7 +37,7 @@ describe('backup', () => {
 
   it('rejects invalid files with a Dutch message', () => {
     expect(() => parseBackup('nope')).toThrow('geen geldig')
-    expect(() => parseBackup('{"app":"x"}')).toThrow('geen Pivotal')
+    expect(() => parseBackup('{"app":"x"}')).toThrow('geen Backhand')
     expect(() =>
       parseBackup('{"app":"pivotal","schemaVersion":99}'),
     ).toThrow('nieuwere versie')
@@ -48,7 +48,7 @@ describe('backup', () => {
 
   it('builds a dated file name', () => {
     expect(backupFileName(new Date(2026, 10, 8))).toBe(
-      'pivotal-backup-2026-11-08.json',
+      'backhand-backup-2026-11-08.json',
     )
   })
 })

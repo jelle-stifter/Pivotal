@@ -9,6 +9,9 @@ import { downloadText } from '../lib/download'
 import { liveMatchIds, topScorers } from '../lib/analysis'
 import { seasonOf } from '../lib/season'
 import { scoreByPeriod, score } from '../lib/stats'
+import LiveLink from '../components/LiveLink'
+import { useMemberships } from '../hooks/useAccess'
+import { matchAccess } from '../lib/access'
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
@@ -28,6 +31,7 @@ export default function HomePage() {
   const actions = useLiveQuery(() => db.actions.toArray(), [])
   // Re-evaluated every minute so a match drops out of "live" by itself.
   const now = useNow(60_000)
+  const { uid, list: memberships } = useMemberships()
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -40,7 +44,11 @@ export default function HomePage() {
   const sorted = [...matches].sort(
     (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id),
   )
-  const live = liveMatchIds(actions, now)
+  const live = liveMatchIds(
+    actions,
+    now,
+    new Set(matches.filter((m) => m.finishedAt).map((m) => m.id)),
+  )
   const liveMatches = sorted.filter((m) => live.has(m.id))
   const featured = liveMatches[0] ?? sorted[0]
   const recent = sorted.slice(0, 5)
@@ -114,7 +122,7 @@ export default function HomePage() {
 
       {empty ? (
         <section className="card" aria-label="Aan de slag">
-          <h3 className="text-xl font-bold">Welkom bij Pivotal</h3>
+          <h3 className="text-xl font-bold">Welkom bij Backhand</h3>
           <p className="mt-1 text-slate-600">
             In drie stappen naar je eerste statistieken.
           </p>
@@ -145,7 +153,11 @@ export default function HomePage() {
         <>
           {featured && (
             <a
-              href={live.has(featured.id) ? `#/match/${featured.id}` : `#/stats/${featured.id}`}
+              href={
+                live.has(featured.id) && matchAccess(featured, memberships, uid) === 'score'
+                  ? `#/match/${featured.id}`
+                  : `#/stats/${featured.id}`
+              }
               className="block no-underline"
               aria-label="Open uitgelichte wedstrijd"
             >
@@ -185,8 +197,11 @@ export default function HomePage() {
                         <span className="text-lg font-black tabular-nums">
                           {s.home} – {s.away}
                         </span>
-                        <a href={`#/match/${m.id}`} className="btn btn-primary inline-flex items-center no-underline">
+                        <LiveLink matchId={m.id} className="btn btn-primary inline-flex items-center no-underline">
                           Open live
+                        </LiveLink>
+                        <a href={`#/stats/${m.id}`} className="btn inline-flex items-center no-underline">
+                          Statistieken
                         </a>
                       </span>
                     </li>

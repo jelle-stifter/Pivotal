@@ -75,6 +75,20 @@ export interface Match {
   activeGoalkeeper: { home?: string; away?: string } // player ids
   /** Which way the home team attacks on screen; absent means true. */
   homeAttacksRight?: boolean
+  /** Epoch ms when the match was ended by hand; absent = not ended. */
+  finishedAt?: number
+  /**
+   * Epoch ms when the clock was last started; absent = clock paused.
+   * Wall-clock based, so the timer keeps running while the coach looks at
+   * other screens (or reloads the app).
+   */
+  clockStartedAt?: number
+  /** Online account (user id) that may score this match; set by a coach. */
+  scorerId?: string
+  /** Who is scoring right now (advisory lock, so two people do not clash). */
+  liveBy?: string
+  liveByName?: string
+  liveAt?: number
   schemaVersion: number
 }
 

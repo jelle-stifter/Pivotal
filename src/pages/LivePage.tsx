@@ -4,6 +4,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { repo } from '../db/repo'
 import { useMatchClock } from '../hooks/useMatchClock'
+import { useMatchAccess, useMemberships } from '../hooks/useAccess'
+import { useAuth } from '../hooks/useAuth'
+import { liveLockedByOther } from '../lib/access'
+import StatsPage from './StatsPage'
 import ActionList, { type ActionPatch } from '../components/ActionList'
 import Court from '../components/Court'
 import { ACTION_GROUPS, ACTION_META, keyToAction } from '../lib/actions'
@@ -36,6 +40,13 @@ export default function LivePage({ matchId }: { matchId: string }) {
   )
   const teams = useLiveQuery(() => db.teams.toArray(), [])
   const match = matches?.[0]
+  const access = useMatchAccess(match)
+  const { uid } = useMemberships()
+  const { session } = useAuth()
+  const myName =
+    (session?.user.user_metadata?.full_name as string | undefined) ??
+    session?.user.email ??
+    'Scorer'
   const players = useLiveQuery(
     async () =>
       match
@@ -64,9 +75,44 @@ export default function LivePage({ matchId }: { matchId: string }) {
       </div>
     )
 
+  // A normal player only sees statistics, never the live screen.
+  if (access === 'view') return <StatsPage matchId={match.id} />
+
+  // Someone else is scoring this match right now.
+  const lockedBy = liveLockedByOther(match, uid, Date.now())
+  if (lockedBy && uid) {
+    return (
+      <div className="card space-y-3">
+        <h2 className="page-title">{lockedBy} scoort al</h2>
+        <p className="text-slate-600">
+          Twee mensen tegelijk scoren geeft dubbele acties. Neem alleen over als de ander echt
+          stopt.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="btn btn-primary"
+            onClick={() =>
+              void repo.updateMatch(match.id, { liveBy: uid, liveByName: myName, liveAt: Date.now() })
+            }
+          >
+            Overnemen
+          </button>
+          <a href={`#/stats/${match.id}`} className="btn inline-flex items-center no-underline">
+            Statistieken bekijken
+          </a>
+          <a href="#/matches" className="btn inline-flex items-center no-underline">
+            ← Wedstrijden
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <LiveScreen
       key={match.id}
+      uid={uid}
+      myName={myName}
       match={match}
       teams={teams}
       players={players}
@@ -86,11 +132,15 @@ function isTypingTarget(t: EventTarget | null) {
 }
 
 function LiveScreen({
+  uid,
+  myName,
   match,
   teams,
   players,
   actions,
 }: {
+  uid: string | null
+  myName: string
   match: Match
   teams: Team[]
   players: Player[]
@@ -109,9 +159,19 @@ function LiveScreen({
     null,
   )
 
-  const clock = useMatchClock(match.clockMs, (ms) => {
-    void repo.updateMatch(match.id, { clockMs: Math.round(ms) })
+  const clock = useMatchClock(match.clockMs, match.clockStartedAt, (patch) => {
+    void repo.updateMatch(match.id, patch)
   })
+
+  // Tell others that I am scoring (advisory lock, refreshed while this screen is open).
+  useEffect(() => {
+    if (!uid) return
+    const claim = () =>
+      void repo.updateMatch(match.id, { liveBy: uid, liveByName: myName, liveAt: Date.now() })
+    claim()
+    const id = setInterval(claim, 30_000)
+    return () => clearInterval(id)
+  }, [uid, myName, match.id])
 
   const bufferRef = useRef('')
   const bufferTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -131,6 +191,7 @@ function LiveScreen({
   const sorted = [...actions].sort((a, b) => b.createdAt - a.createdAt)
   const result = score(actions, match.homeTeamId, match.awayTeamId)
   const lastPeriod = match.currentPeriod >= match.format
+  const finished = Boolean(match.finishedAt)
 
   const keepers = (tid: string) =>
     players.filter((p) => p.teamId === tid && p.isGoalkeeper)
@@ -200,7 +261,25 @@ function LiveScreen({
     })
   }
 
+  async function finishMatch() {
+    if (!confirm('Wedstrijd beëindigen? De klok stopt en de wedstrijd is niet meer live. Je kunt hem later heropenen.'))
+      return
+    setPending(null)
+    await repo.updateMatch(match.id, {
+      clockMs: Math.round(clock.get()),
+      clockStartedAt: undefined,
+      finishedAt: Date.now(),
+    })
+    flash('Wedstrijd beëindigd')
+  }
+
+  async function reopenMatch() {
+    await repo.updateMatch(match.id, { finishedAt: undefined })
+    flash('Wedstrijd heropend')
+  }
+
   async function logAction(type: ActionType, explicit?: Player) {
+    if (finished) return flash('Wedstrijd is beëindigd. Heropen hem om acties te loggen.', true)
     let player = explicit ?? selected
     // A save is credited to the goalkeeper on court when nobody is selected.
     if (!player && type === 'save') {
@@ -241,14 +320,15 @@ function LiveScreen({
   }
 
   async function nextPeriod() {
+    if (finished) return flash('Wedstrijd is beëindigd', true)
     if (lastPeriod) return flash('Dit is de laatste periode', true)
-    clock.pause()
     // Halftime of a 2-halves match: the teams swap ends. Thirds never auto-flip.
     const swap = match.format === 2
     if (swap) setPending(null)
     await repo.updateMatch(match.id, {
       currentPeriod: match.currentPeriod + 1,
       clockMs: Math.round(clock.get()),
+      clockStartedAt: undefined,
       ...(swap ? { homeAttacksRight: !homeAttacksRight(match) } : {}),
     })
     flash(
@@ -291,7 +371,7 @@ function LiveScreen({
     switch (e.key) {
       case ' ':
         e.preventDefault()
-        clock.toggle()
+        if (!finished) clock.toggle()
         return
       case 'Enter':
         if (bufferRef.current) {
@@ -390,7 +470,7 @@ function LiveScreen({
         awayGoals={result.away}
         date={match.date}
         location={match.location}
-        live={clock.running}
+        live={clock.running && !finished}
       >
         <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-white/15 pt-4">
           <div
@@ -402,22 +482,38 @@ function LiveScreen({
           <span className="chip">
             {periodLabel(match.format, match.currentPeriod)}
           </span>
-          <button
-            className={`btn ${clock.running ? '' : 'btn-primary'}`}
-            onClick={clock.toggle}
-          >
-            {clock.running ? 'Pauze' : 'Start'} <span className="kbd">Spatie</span>
-          </button>
-          <button
-            className="btn"
-            onClick={() => void nextPeriod()}
-            disabled={lastPeriod}
-          >
-            Volgende periode <span className="kbd">N</span>
-          </button>
+          {finished ? (
+            <>
+              <span className="chip">Beëindigd</span>
+              <button className="btn btn-primary" onClick={() => void reopenMatch()}>
+                Heropenen
+              </button>
+            </>
+          ) : (
+            <>
+            <button
+              className={`btn ${clock.running ? '' : 'btn-primary'}`}
+              onClick={clock.toggle}
+            >
+              {clock.running ? 'Pauze' : 'Start'} <span className="kbd">Spatie</span>
+            </button>
+            <button
+              className="btn"
+              onClick={() => void nextPeriod()}
+              disabled={lastPeriod}
+            >
+              Volgende periode <span className="kbd">N</span>
+            </button>
+            </>
+          )}
           <button className="btn" onClick={() => void undo()}>
             Ongedaan <span className="kbd">Ctrl+Z</span>
           </button>
+          {!finished && (
+            <button className="btn btn-danger" onClick={() => void finishMatch()}>
+              Wedstrijd beëindigen
+            </button>
+          )}
         </div>
       </ScoreHero>
 
@@ -532,12 +628,21 @@ function LiveScreen({
               </button>
             </div>
           </div>
-          <div className="mx-auto max-w-3xl">
-            <Court
-              label="Speelveld: klik om de positie van de volgende actie te kiezen"
-              pending={pendingPos}
-              onPick={setPending}
-            />
+          {/* Each name stands behind the goal that team defends. */}
+          <div className="mx-auto flex max-w-5xl items-stretch gap-1.5">
+            <div className="court-side court-side-left">
+              {teamName(homeAttacksRight(match) ? match.homeTeamId : match.awayTeamId)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <Court
+                label="Speelveld: klik om de positie van de volgende actie te kiezen"
+                pending={pendingPos}
+                onPick={setPending}
+              />
+            </div>
+            <div className="court-side">
+              {teamName(homeAttacksRight(match) ? match.awayTeamId : match.homeTeamId)}
+            </div>
           </div>
           <p className="text-xs text-slate-500" aria-live="polite">
             {pendingPos

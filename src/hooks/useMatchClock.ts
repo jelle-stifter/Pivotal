@@ -1,68 +1,51 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+
+export interface ClockPatch {
+  clockMs: number
+  clockStartedAt: number | undefined
+}
 
 /**
  * Cumulative match clock (handball: runs on across periods).
- * `get()` returns the exact current value, also between render ticks,
- * so actions are stamped with the true time.
+ *
+ * The state lives in the match record (`clockMs` + `clockStartedAt`), not in
+ * this component. So the clock keeps running when the coach opens the
+ * statistics or the match list, and after a reload. `get()` returns the exact
+ * current value, also between render ticks.
  */
 export function useMatchClock(
-  initialMs: number,
-  persist: (ms: number) => void,
+  clockMs: number,
+  clockStartedAt: number | undefined,
+  update: (patch: ClockPatch) => void,
 ) {
-  const [ms, setMs] = useState(initialMs)
-  const [running, setRunning] = useState(false)
-  const baseRef = useRef(initialMs)
-  const startRef = useRef(0)
-  const runningRef = useRef(false)
-  const persistRef = useRef(persist)
-  persistRef.current = persist
+  const running = clockStartedAt !== undefined && clockStartedAt !== null
+  const [, tick] = useState(0)
 
   const get = useCallback(
-    () =>
-      runningRef.current
-        ? baseRef.current + (performance.now() - startRef.current)
-        : baseRef.current,
-    [],
+    () => (running ? clockMs + (Date.now() - clockStartedAt) : clockMs),
+    [running, clockMs, clockStartedAt],
   )
 
   const start = useCallback(() => {
-    if (runningRef.current) return
-    startRef.current = performance.now()
-    runningRef.current = true
-    setRunning(true)
-  }, [])
+    if (running) return
+    update({ clockMs, clockStartedAt: Date.now() })
+  }, [running, clockMs, update])
 
   const pause = useCallback(() => {
-    if (!runningRef.current) return
-    baseRef.current = get()
-    runningRef.current = false
-    setRunning(false)
-    setMs(baseRef.current)
-    persistRef.current(baseRef.current)
-  }, [get])
+    if (!running) return
+    update({ clockMs: Math.round(get()), clockStartedAt: undefined })
+  }, [running, get, update])
 
   const toggle = useCallback(() => {
-    if (runningRef.current) pause()
+    if (running) pause()
     else start()
-  }, [pause, start])
+  }, [running, pause, start])
 
   useEffect(() => {
     if (!running) return
-    const tick = setInterval(() => setMs(get()), 200)
-    const save = setInterval(() => persistRef.current(get()), 5000)
-    return () => {
-      clearInterval(tick)
-      clearInterval(save)
-    }
-  }, [running, get])
+    const id = setInterval(() => tick((n) => n + 1), 200)
+    return () => clearInterval(id)
+  }, [running])
 
-  // Persist the final value when leaving the screen.
-  useEffect(
-    () => () => {
-      persistRef.current(get())
-    },
-    [get],
-  )
-
-  return { ms, running, get, start, pause, toggle }
+  return { ms: get(), running, get, start, pause, toggle }
 }

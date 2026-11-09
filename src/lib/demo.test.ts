@@ -73,7 +73,7 @@ describe('buildDemo', () => {
     }
   })
 
-  it('gives a varied season: a win, a draw and a loss for HV Pivotal', () => {
+  it('gives a varied season: a win, a draw and a loss for HV Backhand', () => {
     const letters = demo.matches.map((m) => {
       const s = score(
         demo.actions.filter((a) => a.matchId === m.id),

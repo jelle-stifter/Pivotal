@@ -55,9 +55,9 @@ export function parseBackup(text: string): Backup {
     throw new Error('Dit is geen geldig back-upbestand (geen JSON).')
   }
   if (!isObj(data) || data.app !== 'pivotal')
-    throw new Error('Dit bestand is geen Pivotal-back-up.')
+    throw new Error('Dit bestand is geen Backhand-back-up.')
   if (typeof data.schemaVersion !== 'number' || data.schemaVersion > SCHEMA_VERSION)
-    throw new Error('Deze back-up komt van een nieuwere versie van Pivotal.')
+    throw new Error('Deze back-up komt van een nieuwere versie van Backhand.')
   return {
     app: 'pivotal',
     schemaVersion: data.schemaVersion,
@@ -87,5 +87,5 @@ export async function restoreBackup(db: PivotalDB, backup: Backup) {
 
 export function backupFileName(now = new Date()) {
   const p = (n: number) => String(n).padStart(2, '0')
-  return `pivotal-backup-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.json`
+  return `backhand-backup-${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}.json`
 }

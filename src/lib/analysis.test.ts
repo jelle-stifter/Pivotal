@@ -114,4 +114,17 @@ describe('liveMatchIds', () => {
     )
     expect([...live].sort()).toEqual(['mixed', 'new'])
   })
+
+  it('never flags a match that was ended by hand', () => {
+    const now = 10_000_000_000
+    const live = liveMatchIds(
+      [
+        { matchId: 'a', createdAt: now - 1000 },
+        { matchId: 'b', createdAt: now - 1000 },
+      ],
+      now,
+      new Set(['a']),
+    )
+    expect([...live]).toEqual(['b'])
+  })
 })

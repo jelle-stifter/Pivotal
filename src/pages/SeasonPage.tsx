@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import LiveLink from '../components/LiveLink'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { KeeperTable, TotalsTable } from '../components/StatsTables'
@@ -230,9 +231,9 @@ export default function SeasonPage() {
                         </td>
                       )}
                       <td className="no-print space-x-4 whitespace-nowrap text-right">
-                        <a href={`#/match/${r.matchId}`} className="text-sm font-semibold underline">
+                        <LiveLink matchId={r.matchId} className="text-sm font-semibold underline">
                           Live
-                        </a>
+                        </LiveLink>
                         <a href={`#/stats/${r.matchId}`} className="text-sm font-semibold underline">
                           Statistieken
                         </a>

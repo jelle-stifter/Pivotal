@@ -212,7 +212,7 @@ const slugify = (s: string) =>
 
 /** e.g. pivotal-seizoen-2020-2021-Lions-2.csv or ...-alle-seizoenen.csv */
 export function seasonFileName(season: string | undefined, teamName?: string): string {
-  return ['pivotal', 'seizoen', season ?? 'alle-seizoenen', teamName ? slugify(teamName) : '']
+  return ['backhand', 'seizoen', season ?? 'alle-seizoenen', teamName ? slugify(teamName) : '']
     .filter(Boolean)
     .join('-') + '.csv'
 }
@@ -225,7 +225,7 @@ export function csvFileName(match: Match, teams: Team[], kind: string): string {
       .replace(/[̀-ͯ]/g, '')
       .replace(/[^a-zA-Z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
-  return `pivotal-${slug(teamName(teams, match.homeTeamId))}-${slug(
+  return `backhand-${slug(teamName(teams, match.homeTeamId))}-${slug(
     teamName(teams, match.awayTeamId),
   )}-${match.date}-${kind}.csv`
 }

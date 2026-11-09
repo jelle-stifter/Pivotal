@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Pivotal',
-        short_name: 'Pivotal',
+        name: 'Backhand',
+        short_name: 'Backhand',
         description: 'Handbal wedstrijdstatistieken',
         lang: 'nl',
         start_url: '/',
@@ -37,6 +37,8 @@ export default defineConfig({
         // Precache the whole app shell so it works fully offline.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
         navigateFallback: 'index.html',
+        // The static privacy page must not be replaced by the app shell.
+        navigateFallbackDenylist: [/^\/privacy\.html$/],
       },
     }),
   ],

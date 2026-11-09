@@ -1,4 +1,4 @@
-# Pivotal
+# Backhand
 
 Handbal wedstrijdstatistieken. Registreer tijdens de wedstrijd goals, schoten, balverlies, saves, onderscheppingen en fouten per speler en team, bekijk daarna de statistieken en exporteer naar Excel.
 
@@ -32,7 +32,7 @@ De app is een PWA: je installeert hem vanuit de browser, zonder installer.
 2. Open de app in **Edge** of **Chrome**.
 3. Klik op het installatie-icoon in de adresbalk, of kies in het menu
    **Apps → Deze site als app installeren** (Edge) / **Opslaan en delen → Pagina als app installeren** (Chrome).
-4. Pivotal opent nu in een eigen venster en staat in het startmenu.
+4. Backhand opent nu in een eigen venster en staat in het startmenu.
 
 De app werkt daarna volledig **offline**. Nieuwe versies worden automatisch opgehaald zodra je weer online bent en worden actief bij de volgende keer starten.
 
@@ -81,7 +81,7 @@ Een save zonder gekozen speler wordt toegekend aan de keeper op het veld. Stel p
 
 - Bovenaan staat de scorekop met eindstand en ruststand, daarna een **vergelijking** van beide teams (balken) en het **scoreverloop** met de topscorers van de wedstrijd.
 - Klik op een speler (Overzicht, Seizoen of topscorers) voor de **spelerspagina**: totalen, schot% of stop%, heatmap per actie en alle wedstrijden.
-- Een wedstrijd telt als **live** zolang de laatste actie minder dan 3 uur geleden is. Live wedstrijden staan op het Overzicht en hebben een badge in de lijst.
+- Een wedstrijd telt als **live** zolang de laatste actie minder dan 3 uur geleden is, tenzij je hem met **Wedstrijd beëindigen** (live-scherm) hebt afgerond. **Heropenen** zet hem terug. Live wedstrijden staan op het Overzicht en hebben een badge in de lijst.
 
 ### Back-up
 
