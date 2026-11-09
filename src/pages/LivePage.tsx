@@ -1,39 +1,39 @@
-import { useEffect, useRef, useState } from 'react'
-import ScoreHero from '../components/ScoreHero'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { repo } from '../db/repo'
 import { useMatchClock } from '../hooks/useMatchClock'
 import { useMatchAccess, useMemberships } from '../hooks/useAccess'
 import { useDisplayName } from '../hooks/useDisplayName'
-import { liveLockedByOther } from '../lib/access'
-import StatsPage from './StatsPage'
 import { useWakeLock } from '../hooks/useWakeLock'
+import { liveLockedByOther } from '../lib/access'
 import { refreshMatch } from '../lib/sync'
-import ActionList, { type ActionPatch } from '../components/ActionList'
-import Court from '../components/Court'
-import { ACTION_GROUPS, ACTION_META, keyToAction } from '../lib/actions'
 import {
-  homeAttacksRight,
-  teamAttacksRight,
-  toNormalized,
-  type Point,
-} from '../lib/court'
-import { resolveNumber } from '../lib/entry'
+  activePenalties,
+  capGameMs,
+  countdownMs,
+  halfEnded,
+  periodChange,
+  periodStartMs,
+  HALF_MS,
+} from '../lib/clock'
+import type { FlowSpec } from '../lib/flows'
+import { topScorerRows } from '../lib/live'
+import {
+  OWN_COLOR,
+  opponentColors,
+  opponentTeamId,
+  ownSide,
+  ownTeamId,
+  shortName,
+} from '../lib/ownTeam'
 import { periodLabel } from '../lib/periods'
 import { score } from '../lib/stats'
 import { formatClock } from '../lib/time'
-import {
-  ACTION_TYPES,
-  type Action,
-  type ActionType,
-  type Match,
-  type Player,
-  type Side,
-  type Team,
-} from '../types'
-
-const BUFFER_TIMEOUT_MS = 1500
+import FlowSheet from '../components/live/FlowSheet'
+import { PenaltyList, ScorersPanel } from '../components/live/LivePanels'
+import StatsPage from './StatsPage'
+import type { Action, ActionType, Match, Player, Team } from '../types'
 
 export default function LivePage({ matchId }: { matchId: string }) {
   const matches = useLiveQuery(
@@ -139,13 +139,32 @@ export default function LivePage({ matchId }: { matchId: string }) {
   )
 }
 
-function isTypingTarget(t: EventTarget | null) {
-  if (!(t instanceof HTMLElement)) return false
+/** A big touch button on the live screen (at least 44px, mostly much bigger). */
+function PadButton({
+  children,
+  color,
+  textColor = '#fff',
+  onClick,
+  disabled,
+  className = '',
+}: {
+  children: ReactNode
+  color: string
+  textColor?: string
+  onClick: () => void
+  disabled?: boolean
+  className?: string
+}) {
   return (
-    t.tagName === 'INPUT' ||
-    t.tagName === 'TEXTAREA' ||
-    t.tagName === 'SELECT' ||
-    t.isContentEditable
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      style={{ background: color, color: textColor }}
+      className={`min-h-[56px] rounded-xl px-2 text-base font-bold leading-tight shadow-sm transition active:scale-[0.97] disabled:opacity-40 sm:text-lg ${className}`}
+    >
+      {children}
+    </button>
   )
 }
 
@@ -164,18 +183,8 @@ function LiveScreen({
   players: Player[]
   actions: Action[]
 }) {
-  const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? '?'
-  const teamNames = Object.fromEntries(teams.map((t) => [t.id, t.name]))
-
-  const [side, setSide] = useState<Side>('home')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [buffer, setBuffer] = useState('')
-  // Raw click on the court (screen orientation), attached to the next action.
-  const [pendingPos, setPendingPos] = useState<Point | null>(null)
-  const pendingRef = useRef<Point | null>(null)
-  const [toast, setToast] = useState<{ text: string; error: boolean } | null>(
-    null,
-  )
+  const [flow, setFlow] = useState<FlowSpec | null>(null)
+  const [toast, setToast] = useState<{ text: string; error: boolean } | null>(null)
 
   const clock = useMatchClock(match.clockMs, match.clockStartedAt, (patch) => {
     void repo.updateMatch(match.id, patch)
@@ -194,28 +203,36 @@ function LiveScreen({
     return () => clearInterval(id)
   }, [uid, myName, match.id])
 
-  const bufferRef = useRef('')
-  const bufferTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  )
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  )
-  const keyHandler = useRef<(e: KeyboardEvent) => void>(() => undefined)
-  const commitRef = useRef<() => Player | null>(() => null)
+  // A toast disappears by itself.
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3000)
+    return () => clearTimeout(t)
+  }, [toast])
 
-  const teamId = side === 'home' ? match.homeTeamId : match.awayTeamId
-  const roster = players
-    .filter((p) => p.teamId === teamId)
-    .sort((a, b) => a.number - b.number)
-  const selected = players.find((p) => p.id === selectedId) ?? null
-  const sorted = [...actions].sort((a, b) => b.createdAt - a.createdAt)
-  const result = score(actions, match.homeTeamId, match.awayTeamId)
-  const lastPeriod = match.currentPeriod >= match.format
+  const period = match.currentPeriod
+  const periods = match.format
   const finished = Boolean(match.finishedAt)
+  const gameMs = capGameMs(clock.ms, period)
+  const ended = halfEnded(clock.ms, period)
 
-  const keepers = (tid: string) =>
-    players.filter((p) => p.teamId === tid && p.isGoalkeeper)
+  // At 0:00 the clock stops by itself; the screen then shows 30:00 again.
+  useEffect(() => {
+    if (clock.running && ended)
+      void repo.updateMatch(match.id, {
+        clockMs: periodStartMs(period) + HALF_MS,
+        clockStartedAt: undefined,
+      })
+  }, [clock.running, ended, match.id, period])
+
+  const ownId = ownTeamId(match)
+  const oppId = opponentTeamId(match)
+  const teamOf = (id: string) => teams.find((t) => t.id === id)
+  const own = ownSide(match) // the side of our own team (HVM)
+  const colors = { own: OWN_COLOR, opp: opponentColors(match.opponentColor) }
+  const homeColor = (own === 'home' ? colors.own : colors.opp).main
+  const awayColor = (own === 'away' ? colors.own : colors.opp).main
+  const result = score(actions, match.homeTeamId, match.awayTeamId)
 
   // If a team has exactly one keeper and none is set yet, set it (sequentially
   // to avoid read-modify-write races on the shared activeGoalkeeper object).
@@ -223,69 +240,51 @@ function LiveScreen({
   const gkAway = match.activeGoalkeeper.away
   useEffect(() => {
     void (async () => {
-      const sides: [Side, string, string | undefined][] = [
+      const sides = [
         ['home', match.homeTeamId, gkHome],
         ['away', match.awayTeamId, gkAway],
-      ]
+      ] as const
       for (const [s, tid, current] of sides) {
         const ks = players.filter((p) => p.teamId === tid && p.isGoalkeeper)
-        if (!current && ks.length === 1)
-          await repo.setActiveGoalkeeper(match.id, s, ks[0].id)
+        if (!current && ks.length === 1) await repo.setActiveGoalkeeper(match.id, s, ks[0].id)
       }
     })()
   }, [match.id, match.homeTeamId, match.awayTeamId, gkHome, gkAway, players])
 
-  function flash(text: string, error = false) {
-    setToast({ text, error })
-    clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(null), 3000)
-  }
+  const flash = (text: string, error = false) => setToast({ text, error })
 
-  function clearBuffer() {
-    clearTimeout(bufferTimer.current)
-    bufferRef.current = ''
-    setBuffer('')
-  }
-
-  /** Resolve the typed digits into a player; returns it (or null if invalid). */
-  function commitBuffer(): Player | null {
-    const b = bufferRef.current
-    if (!b) return null
-    clearBuffer()
-    const { player } = resolveNumber(b, roster)
-    if (player) {
-      setSelectedId(player.id)
-      return player
+  function toggleClock() {
+    if (finished) return
+    if (ended) {
+      flash(period < periods ? 'Ga eerst naar de volgende helft (+)' : 'De wedstrijd is afgelopen', true)
+      return
     }
-    flash(`Geen speler met nummer ${b}`, true)
-    return null
-  }
-  commitRef.current = commitBuffer
-
-  function selectSide(s: Side) {
-    if (s === side) return
-    clearBuffer()
-    setSelectedId(null)
-    setSide(s)
+    clock.toggle()
   }
 
-  function setPending(p: Point | null) {
-    pendingRef.current = p
-    setPendingPos(p)
-  }
-
-  async function flipSides() {
-    // A pending click was made in the old orientation: drop it.
-    setPending(null)
+  async function changePeriod(delta: 1 | -1) {
+    if (finished) return
+    const change = periodChange(period, delta, periods)
+    if (!change) return
     await repo.updateMatch(match.id, {
-      homeAttacksRight: !homeAttacksRight(match),
+      currentPeriod: change.period,
+      clockMs: change.clockMs,
+      clockStartedAt: undefined,
     })
   }
 
+  async function undo() {
+    const undone = await repo.undoLastAction(match.id)
+    flash(undone ? 'Laatste actie ongedaan gemaakt' : 'Niets om ongedaan te maken', !undone)
+  }
+
   async function finishMatch() {
-    if (!confirm('Wedstrijd beëindigen? De klok stopt en de wedstrijd is niet meer live. Je kunt hem later heropenen.'))
+    if (
+      !confirm(
+        'Wedstrijd beëindigen? De klok stopt en de wedstrijd is niet meer live. Je kunt hem later heropenen.',
+      )
+    )
       return
-    setPending(null)
     await repo.updateMatch(match.id, {
       clockMs: Math.round(clock.get()),
       clockStartedAt: undefined,
@@ -299,453 +298,262 @@ function LiveScreen({
     flash('Wedstrijd heropend')
   }
 
-  async function logAction(type: ActionType, explicit?: Player) {
+  const start = (spec: FlowSpec) => {
     if (finished) return flash('Wedstrijd is beëindigd. Heropen hem om acties te loggen.', true)
-    let player = explicit ?? selected
-    // A save is credited to the goalkeeper on court when nobody is selected.
-    if (!player && type === 'save') {
-      const gkId = match.activeGoalkeeper[side]
-      player = players.find((p) => p.id === gkId) ?? null
-    }
-    if (!player) return flash('Kies eerst een speler', true)
-    // Take the pending position now (synchronously) so a quick second key
-    // press cannot reuse it; convert with the acting player's team.
-    const click = pendingRef.current
-    const pos = click
-      ? toNormalized(click, teamAttacksRight(match, player.teamId))
-      : undefined
-    setPending(null)
-    try {
-      await repo.logAction({
-        matchId: match.id,
-        teamId: player.teamId,
-        playerId: player.id,
-        type,
-        clockMs: Math.round(clock.get()),
-        x: pos?.x,
-        y: pos?.y,
-      })
-      flash(
-        `${ACTION_META[type].label} · #${player.number} ${player.name}${
-          pos ? ' · positie' : ''
-        }`,
+    setFlow(spec)
+  }
+  const single = (side: 'own' | 'opp', type: ActionType): FlowSpec => ({ kind: 'single', side, type })
+
+  /** The button set of one side: extended for our own team, simple for the opponent. */
+  function sideButtons(isOwn: boolean, color: string) {
+    const gap = 'grid gap-2'
+    if (isOwn)
+      return (
+        <div className="flex flex-1 flex-col gap-2">
+          <div className={`${gap} flex-1 grid-cols-2`}>
+            <PadButton color={color} onClick={() => start({ kind: 'goal', side: 'own' })}>
+              Doelpunt
+            </PadButton>
+            <PadButton color={color} onClick={() => start({ kind: 'penalty', side: 'own' })}>
+              7 meter
+            </PadButton>
+            <PadButton color={color} onClick={() => start(single('own', 'shot'))}>
+              Miss
+            </PadButton>
+            <PadButton color={color} onClick={() => start(single('own', 'off_target'))}>
+              Niet op doel
+            </PadButton>
+          </div>
+          <div className="rounded-xl bg-black/20 p-2">
+            <div className="mb-1 px-1 text-xs font-bold uppercase tracking-wide text-white/60">
+              Fouten last
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <PadButton color="#4b5563" className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'bad_pass'))}>
+                Pass fout
+              </PadButton>
+              <PadButton color="#4b5563" className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'technical_foul'))}>
+                Technische fout
+              </PadButton>
+              <PadButton color="#4b5563" className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'interception'))}>
+                Onderschepping
+              </PadButton>
+            </div>
+          </div>
+          <PadButton color={color} className="min-h-[64px]" onClick={() => start(single('own', 'block'))}>
+            Block
+          </PadButton>
+        </div>
       )
-    } catch (e) {
-      flash(e instanceof Error ? e.message : 'Opslaan mislukt', true)
-    }
-  }
-
-  async function undo() {
-    const undone = await repo.undoLastAction(match.id)
-    flash(undone ? 'Laatste actie ongedaan gemaakt' : 'Niets om ongedaan te maken')
-  }
-
-  async function nextPeriod() {
-    if (finished) return flash('Wedstrijd is beëindigd', true)
-    if (lastPeriod) return flash('Dit is de laatste periode', true)
-    // Halftime of a 2-halves match: the teams swap ends. Thirds never auto-flip.
-    const swap = match.format === 2
-    if (swap) setPending(null)
-    await repo.updateMatch(match.id, {
-      currentPeriod: match.currentPeriod + 1,
-      clockMs: Math.round(clock.get()),
-      clockStartedAt: undefined,
-      ...(swap ? { homeAttacksRight: !homeAttacksRight(match) } : {}),
-    })
-    flash(
-      `Nu: ${periodLabel(match.format, match.currentPeriod + 1)}${
-        swap ? ' · kanten gewisseld' : ''
-      }`,
+    return (
+      <div className="grid flex-1 grid-cols-2 gap-2">
+        <PadButton color={color} onClick={() => start({ kind: 'goal', side: 'opp' })}>
+          Doelpunt
+        </PadButton>
+        <PadButton color={color} onClick={() => start({ kind: 'save' })}>
+          Stop
+        </PadButton>
+        <PadButton color={color} onClick={() => start(single('opp', 'off_target'))}>
+          Niet op doel
+        </PadButton>
+        <PadButton color={color} onClick={() => start({ kind: 'penalty', side: 'opp' })}>
+          7 meter
+        </PadButton>
+      </div>
     )
   }
 
-  keyHandler.current = (e: KeyboardEvent) => {
-    if (e.repeat || isTypingTarget(e.target)) return
-
-    if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'z') {
-      e.preventDefault()
-      void undo()
-      return
-    }
-    if (e.ctrlKey || e.metaKey || e.altKey) return
-
-    if (/^\d$/.test(e.key)) {
-      e.preventDefault()
-      clearTimeout(bufferTimer.current)
-      const next = bufferRef.current + e.key
-      bufferRef.current = next
-      setBuffer(next)
-      const r = resolveNumber(next, roster)
-      if (r.player && !r.pending) commitBuffer()
-      else if (!r.player && !r.pending) {
-        clearBuffer()
-        flash(`Geen speler met nummer ${next}`, true)
-      } else {
-        bufferTimer.current = setTimeout(
-          () => commitRef.current(),
-          BUFFER_TIMEOUT_MS,
-        )
-      }
-      return
-    }
-
-    switch (e.key) {
-      case ' ':
-        e.preventDefault()
-        if (!finished) clock.toggle()
-        return
-      case 'Enter':
-        if (bufferRef.current) {
-          e.preventDefault()
-          commitBuffer()
-        }
-        return
-      case 'Escape':
-        clearBuffer()
-        setSelectedId(null)
-        setPending(null)
-        return
-      case 'ArrowLeft':
-        e.preventDefault()
-        selectSide('home')
-        return
-      case 'ArrowRight':
-        e.preventDefault()
-        selectSide('away')
-        return
-      case 'Tab':
-        // Only when nothing is focused, so normal keyboard navigation works.
-        if (e.target === document.body) {
-          e.preventDefault()
-          selectSide(side === 'home' ? 'away' : 'home')
-        }
-        return
-    }
-
-    if (e.key.toLowerCase() === 'n') {
-      e.preventDefault()
-      void nextPeriod()
-      return
-    }
-
-    const type = keyToAction(e.key, e.shiftKey)
-    if (type) {
-      e.preventDefault()
-      const hadBuffer = bufferRef.current !== ''
-      const typed = hadBuffer ? commitBuffer() : undefined
-      if (hadBuffer && !typed) return
-      void logAction(type, typed ?? undefined)
-    }
+  const penalties = activePenalties(actions, gameMs)
+  const sideHeader = (side: 'home' | 'away') => {
+    const t = teamOf(side === 'home' ? match.homeTeamId : match.awayTeamId)
+    const color = side === 'home' ? homeColor : awayColor
+    return (
+      <div className="flex items-center gap-2 text-sm font-bold">
+        <span aria-hidden className="inline-block h-3 w-3 rounded-full" style={{ background: color }} />
+        <span className="truncate">
+          {t?.name ?? '?'} <span className="font-normal text-white/60">· {side === 'home' ? 'Thuis' : 'Uit'}</span>
+        </span>
+      </div>
+    )
   }
 
-  useEffect(() => {
-    const on = (e: KeyboardEvent) => keyHandler.current(e)
-    window.addEventListener('keydown', on)
-    return () => {
-      window.removeEventListener('keydown', on)
-      clearTimeout(bufferTimer.current)
-      clearTimeout(toastTimer.current)
-    }
-  }, [])
-
-  async function saveEdit(id: string, patch: ActionPatch) {
-    try {
-      await repo.updateAction(id, patch)
-    } catch (e) {
-      flash(e instanceof Error ? e.message : 'Opslaan mislukt', true)
-    }
-  }
-
-  function deleteAction(id: string) {
-    if (confirm('Deze actie verwijderen?')) void repo.deleteAction(id)
-  }
-
-  const missingKeeper = (['home', 'away'] as Side[])
-    .map((s) => {
-      const tid = s === 'home' ? match.homeTeamId : match.awayTeamId
-      return keepers(tid).length > 0 && !match.activeGoalkeeper[s]
-        ? teamName(tid)
-        : null
-    })
-    .filter((n): n is string => n !== null)
+  const homeIsOwn = own === 'home'
+  const buttonsLocked = finished
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="page-title">Live registreren</h2>
-        <div className="flex gap-2 text-sm font-semibold">
-          <a href={`#/stats/${match.id}`} className="btn inline-flex items-center no-underline">
-            Statistieken
-          </a>
-          <a href="#/matches" className="btn inline-flex items-center no-underline">
-            ← Wedstrijden
-          </a>
+    <div
+      className="fixed inset-x-0 bottom-0 top-14 z-10 overflow-y-auto text-white"
+      style={{ background: '#2a2c30', fontFamily: 'system-ui, sans-serif' }}
+    >
+      <div className="mx-auto grid min-h-full max-w-[1440px] gap-3 p-3 lg:h-full lg:grid-cols-[1fr_17rem_1fr_16rem] lg:grid-rows-[1fr_auto]">
+        {/* Left: clock and the buttons of the home side */}
+        <div className="flex min-h-0 flex-col gap-3">
+          <div className="flex items-stretch gap-3">
+            <button
+              type="button"
+              onClick={toggleClock}
+              disabled={finished}
+              aria-label={clock.running ? 'Stop de klok' : 'Start de klok'}
+              style={{ background: clock.running ? '#dc2626' : '#16a34a' }}
+              className="min-h-[88px] min-w-[7.5rem] rounded-2xl px-4 text-2xl font-extrabold shadow-md transition active:scale-[0.97] disabled:opacity-40"
+            >
+              {clock.running ? 'Stop' : 'Start'}
+            </button>
+            <div
+              className="flex flex-1 items-center justify-center rounded-2xl bg-black/30 px-3 text-5xl font-bold tabular-nums sm:text-6xl"
+              aria-label="Wedstrijdklok"
+              role="timer"
+            >
+              {formatClock(countdownMs(clock.ms, period))}
+            </div>
+          </div>
+          {sideHeader('home')}
+          <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
+            {sideButtons(homeIsOwn, homeColor)}
+          </div>
+        </div>
+
+        {/* Middle: score, half, running suspensions */}
+        <div className="flex min-h-0 flex-col gap-3">
+          <section className="rounded-2xl bg-black/30 p-3 text-center" aria-label="Stand">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-white/60">Stand</h2>
+            <div className="mt-1 flex items-center justify-center gap-2 text-4xl font-extrabold tabular-nums">
+              <span style={{ color: homeColor }}>{shortName(teamOf(match.homeTeamId))}</span>
+              <span>{result.home}</span>
+              <span className="text-white/40">|</span>
+              <span>{result.away}</span>
+              <span style={{ color: awayColor }}>{shortName(teamOf(match.awayTeamId))}</span>
+            </div>
+            <div className="mt-1 flex justify-between text-xs text-white/60">
+              <span>Thuis</span>
+              <span>Uit</span>
+            </div>
+            {finished && (
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-semibold">Beëindigd</span>
+                <button
+                  type="button"
+                  onClick={() => void reopenMatch()}
+                  className="min-h-11 rounded-lg border border-white/30 px-3 text-sm font-semibold hover:bg-white/10"
+                >
+                  Heropenen
+                </button>
+              </div>
+            )}
+          </section>
+
+          <div className="flex items-center justify-between rounded-xl bg-black/25 p-1" aria-label="Helft">
+            <button
+              type="button"
+              aria-label="Vorige helft"
+              onClick={() => void changePeriod(-1)}
+              disabled={finished || period <= 1}
+              className="min-h-11 min-w-11 rounded-lg px-3 text-2xl font-bold hover:bg-white/10 disabled:opacity-30"
+            >
+              −
+            </button>
+            <span className="text-sm font-semibold">{periodLabel(periods, period)}</span>
+            <button
+              type="button"
+              aria-label="Volgende helft"
+              onClick={() => void changePeriod(1)}
+              disabled={finished || period >= periods}
+              className="min-h-11 min-w-11 rounded-lg px-3 text-2xl font-bold hover:bg-white/10 disabled:opacity-30"
+            >
+              +
+            </button>
+          </div>
+
+          <PenaltyList
+            penalties={penalties}
+            players={players}
+            teams={teams}
+            colors={{ own: colors.own.main, opp: colors.opp.main }}
+            ownTeamId={ownId}
+          />
+        </div>
+
+        {/* Right: the away side, with undo next to its team name */}
+        <div className="flex min-h-0 flex-col gap-3">
+          <div className="flex min-h-[88px] items-center justify-between gap-2 rounded-2xl bg-black/25 px-3">
+            {sideHeader('away')}
+            <button
+              type="button"
+              onClick={() => void undo()}
+              className="min-h-11 shrink-0 rounded-lg border border-white/30 px-3 text-sm font-bold hover:bg-white/10"
+            >
+              Ongedaan maken
+            </button>
+          </div>
+          <div className="h-5" aria-hidden />
+          <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
+            {sideButtons(!homeIsOwn, awayColor)}
+          </div>
+        </div>
+
+        {/* Far right: top scorers */}
+        <div className="flex min-h-0 flex-col gap-3">
+          <ScorersPanel
+            opponent={topScorerRows(actions, oppId)}
+            own={topScorerRows(actions, ownId)}
+            players={players}
+            colors={{ own: colors.own.accent, opp: colors.opp.accent }}
+          />
+        </div>
+
+        {/* Bottom: cards and 2 minutes, and ending the match */}
+        <div
+          className={`grid grid-cols-4 gap-2 lg:col-span-3 ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}
+        >
+          <PadButton color="#eab308" textColor="#111" onClick={() => start({ kind: 'card', type: 'yellow_card' })}>
+            Geel
+          </PadButton>
+          <PadButton color="#52525b" onClick={() => start({ kind: 'card', type: 'suspension' })}>
+            2 Min
+          </PadButton>
+          <PadButton color="#dc2626" onClick={() => start({ kind: 'card', type: 'red_card' })}>
+            Rood
+          </PadButton>
+          <PadButton color="#2563eb" onClick={() => start({ kind: 'card', type: 'blue_card' })}>
+            Blauw
+          </PadButton>
+        </div>
+        <div className="flex">
+          <button
+            type="button"
+            onClick={() => void finishMatch()}
+            disabled={finished}
+            className="min-h-[56px] w-full rounded-xl border border-red-400/60 px-3 font-bold text-red-200 hover:bg-red-500/20 disabled:opacity-30"
+          >
+            Wedstrijd beëindigen
+          </button>
         </div>
       </div>
 
-      {/* Scoreboard + clock */}
-      <ScoreHero
-        homeName={teamName(match.homeTeamId)}
-        awayName={teamName(match.awayTeamId)}
-        homeGoals={result.home}
-        awayGoals={result.away}
-        date={match.date}
-        location={match.location}
-        live={clock.running && !finished}
+      <div
+        role="status"
+        aria-live="polite"
+        className={`pointer-events-none fixed bottom-20 left-1/2 z-40 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg ${
+          toast ? '' : 'hidden'
+        }`}
+        style={{ background: toast?.error ? '#7f1d1d' : '#0f766e', color: '#fff' }}
       >
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-3 border-t border-white/15 pt-4">
-          <div
-            className="min-w-28 text-center text-3xl font-bold tabular-nums"
-            aria-label="Wedstrijdklok"
-          >
-            {formatClock(clock.ms)}
-          </div>
-          <span className="chip">
-            {periodLabel(match.format, match.currentPeriod)}
-          </span>
-          {finished ? (
-            <>
-              <span className="chip">Beëindigd</span>
-              <button className="btn btn-primary" onClick={() => void reopenMatch()}>
-                Heropenen
-              </button>
-            </>
-          ) : (
-            <>
-            <button
-              className={`btn ${clock.running ? '' : 'btn-primary'}`}
-              onClick={clock.toggle}
-            >
-              {clock.running ? 'Pauze' : 'Start'} <span className="kbd">Spatie</span>
-            </button>
-            <button
-              className="btn"
-              onClick={() => void nextPeriod()}
-              disabled={lastPeriod}
-            >
-              Volgende periode <span className="kbd">N</span>
-            </button>
-            </>
-          )}
-          <button className="btn" onClick={() => void undo()}>
-            Ongedaan <span className="kbd">Ctrl+Z</span>
-          </button>
-          {!finished && (
-            <button className="btn btn-danger" onClick={() => void finishMatch()}>
-              Wedstrijd beëindigen
-            </button>
-          )}
-        </div>
-      </ScoreHero>
+        {toast?.text}
+      </div>
 
-      {/* Entry */}
-      <section className="card space-y-4" aria-label="Invoer">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="segmented" role="group" aria-label="Actief team">
-            {(['home', 'away'] as Side[]).map((s) => (
-              <button
-                key={s}
-                type="button"
-                aria-pressed={side === s}
-                className="seg-btn"
-                onClick={() => selectSide(s)}
-              >
-                {teamName(s === 'home' ? match.homeTeamId : match.awayTeamId)}
-              </button>
-            ))}
-          </div>
-          <div className="text-sm text-slate-600" aria-live="polite">
-            {buffer ? (
-              <>
-                Nummer: <strong className="tabular-nums">{buffer}</strong>…
-              </>
-            ) : selected ? (
-              <>
-                Geselecteerd:{' '}
-                <strong>
-                  #{selected.number} {selected.name}
-                </strong>
-              </>
-            ) : (
-              'Typ een rugnummer of klik een speler'
-            )}
-          </div>
-        </div>
-
-        <div className="roster">
-          {roster.map((p) => {
-            const isActiveGk = match.activeGoalkeeper[side] === p.id
-            return (
-              <button
-                key={p.id}
-                type="button"
-                aria-pressed={p.id === selectedId}
-                className="player-btn"
-                onClick={() => {
-                  clearBuffer()
-                  setSelectedId(p.id)
-                }}
-              >
-                <span className="player-nr">{p.number}</span>
-                <span className="truncate">{p.name}</span>
-                {p.isGoalkeeper && (
-                  <span
-                    className="gk-badge"
-                    title={isActiveGk ? 'Keeper op het veld' : 'Keeper'}
-                  >
-                    {isActiveGk ? 'K●' : 'K'}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-          {roster.length === 0 && (
-            <p className="text-slate-500">
-              Dit team heeft nog geen spelers. Voeg ze toe onder Teams.
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          {ACTION_GROUPS.map((g) => (
-            <div key={g.title}>
-              <div className="section-title mb-1.5">{g.title}</div>
-              <div className="action-pad">
-                {g.types.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    className="action-btn"
-                    onClick={() => void logAction(t)}
-                  >
-                    <span>{ACTION_META[t].label}</span>
-                    <span className="kbd">{ACTION_META[t].key}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="space-y-2 border-t border-slate-200 pt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="section-title">Positie (optioneel)</div>
-              <div className="text-sm text-slate-600">
-                {teamName(match.homeTeamId)} valt aan{' '}
-                {homeAttacksRight(match) ? '→' : '←'} ·{' '}
-                {teamName(match.awayTeamId)} valt aan{' '}
-                {homeAttacksRight(match) ? '←' : '→'}
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {pendingPos && (
-                <button className="btn" onClick={() => setPending(null)}>
-                  Wis positie
-                </button>
-              )}
-              <button className="btn" onClick={() => void flipSides()}>
-                Wissel van kant
-              </button>
-            </div>
-          </div>
-          {/* Each name stands behind the goal that team defends. */}
-          <div className="mx-auto flex max-w-5xl items-stretch gap-1.5">
-            <div className="court-side court-side-left">
-              {teamName(homeAttacksRight(match) ? match.homeTeamId : match.awayTeamId)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <Court
-                label="Speelveld: klik om de positie van de volgende actie te kiezen"
-                pending={pendingPos}
-                onPick={setPending}
-              />
-            </div>
-            <div className="court-side">
-              {teamName(homeAttacksRight(match) ? match.awayTeamId : match.homeTeamId)}
-            </div>
-          </div>
-          <p className="text-xs text-slate-500" aria-live="polite">
-            {pendingPos
-              ? 'Positie gezet: wordt gekoppeld aan de volgende actie (elk type).'
-              : 'Klik op het veld om een positie te kiezen, en log dan de actie. Zonder klik wordt de actie zonder positie opgeslagen.'}
-          </p>
-        </div>
-
-        <div
-          role="status"
-          aria-live="polite"
-          className="min-h-6 text-sm font-semibold"
-          style={{ color: toast?.error ? 'var(--danger)' : 'var(--brand-strong)' }}
-        >
-          {toast?.text ?? ''}
-        </div>
-
-        <p className="text-xs text-slate-500">
-          Toetsen: typ rugnummer (Enter bevestigt) ·{' '}
-          {ACTION_TYPES.map((t) => `${ACTION_META[t].key} ${ACTION_META[t].label.toLowerCase()}`).join(' · ')}{' '}
-          · Tab of ←/→ team · Spatie klok · N volgende periode · Ctrl+Z
-          ongedaan · Esc wis selectie en positie. Een save zonder gekozen
-          speler gaat naar de keeper op het veld; een 7m-doelpunt, -stop of
-          -mis wordt aan de keeper van de tegenstander toegekend.
-        </p>
-      </section>
-
-      {/* Goalkeepers */}
-      <section className="card" aria-label="Keepers op het veld">
-        <h3 className="section-title mb-3">Keeper op het veld</h3>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {(['home', 'away'] as Side[]).map((s) => {
-            const tid = s === 'home' ? match.homeTeamId : match.awayTeamId
-            const ks = keepers(tid)
-            return (
-              <label key={s} className="label">
-                {teamName(tid)}
-                <select
-                  className="field"
-                  value={match.activeGoalkeeper[s] ?? ''}
-                  onChange={(e) =>
-                    void repo.setActiveGoalkeeper(
-                      match.id,
-                      s,
-                      e.target.value || undefined,
-                    )
-                  }
-                  disabled={ks.length === 0}
-                >
-                  <option value="">
-                    {ks.length === 0 ? 'Geen keepers in team' : 'Geen keeper'}
-                  </option>
-                  {ks.map((k) => (
-                    <option key={k.id} value={k.id}>
-                      #{k.number} {k.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )
-          })}
-        </div>
-        {missingKeeper.length > 0 && (
-          <p className="mt-3 text-sm text-amber-700">
-            Geen keeper ingesteld voor {missingKeeper.join(' en ')}: goals
-            tegen worden dan niet aan een keeper toegekend.
-          </p>
-        )}
-      </section>
-
-      {/* Action list */}
-      <section className="card" aria-label="Acties">
-        <h3 className="section-title mb-2">Acties ({sorted.length})</h3>
-        <ActionList
-          actions={sorted}
+      {flow && (
+        <FlowSheet
+          spec={flow}
+          match={match}
+          teams={teams}
           players={players}
-          teamNames={teamNames}
-          format={match.format}
-          onSave={saveEdit}
-          onDelete={deleteAction}
+          getClockMs={() => capGameMs(clock.get(), period)}
+          onClose={(message) => {
+            setFlow(null)
+            if (message) flash(message)
+          }}
         />
-      </section>
+      )}
     </div>
   )
 }
