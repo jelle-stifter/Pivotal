@@ -31,6 +31,7 @@ import { periodLabel } from '../lib/periods'
 import { score } from '../lib/stats'
 import { formatClock } from '../lib/time'
 import FlowSheet from '../components/live/FlowSheet'
+import MatchPrep from '../components/MatchPrep'
 import { PenaltyList, ScorersPanel } from '../components/live/LivePanels'
 import StatsPage from './StatsPage'
 import type { Action, ActionType, Match, Player, Team } from '../types'
@@ -184,6 +185,7 @@ function LiveScreen({
   actions: Action[]
 }) {
   const [flow, setFlow] = useState<FlowSpec | null>(null)
+  const [showPrep, setShowPrep] = useState(false)
   const [toast, setToast] = useState<{ text: string; error: boolean } | null>(null)
 
   const clock = useMatchClock(match.clockMs, match.clockStartedAt, (patch) => {
@@ -471,6 +473,13 @@ function LiveScreen({
             colors={{ own: colors.own.main, opp: colors.opp.main }}
             ownTeamId={ownId}
           />
+          <button
+            type="button"
+            onClick={() => setShowPrep(true)}
+            className="min-h-11 rounded-xl border border-white/25 px-3 text-sm font-semibold hover:bg-white/10"
+          >
+            Voorbereiding
+          </button>
         </div>
 
         {/* Right: the away side, with undo next to its team name */}
@@ -540,6 +549,25 @@ function LiveScreen({
       >
         {toast?.text}
       </div>
+
+      {showPrep && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Voorbereiding"
+        >
+          <div className="max-h-full w-full max-w-4xl overflow-y-auto rounded-2xl bg-white p-4 text-slate-900 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="page-title">Voorbereiding</h2>
+              <button className="btn btn-primary" onClick={() => setShowPrep(false)}>
+                Klaar
+              </button>
+            </div>
+            <MatchPrep match={match} />
+          </div>
+        </div>
+      )}
 
       {flow && (
         <FlowSheet

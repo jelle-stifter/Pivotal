@@ -84,6 +84,9 @@ export function createRepo(db: PivotalDB = defaultDb) {
     async renameTeam(id: string, name: string) {
       await db.teams.update(id, { name })
     },
+    async updateTeam(id: string, patch: Partial<Omit<Team, 'id'>>) {
+      await db.teams.update(id, patch)
+    },
     async deleteTeam(id: string) {
       const used = await db.matches
         .filter((m) => m.homeTeamId === id || m.awayTeamId === id)

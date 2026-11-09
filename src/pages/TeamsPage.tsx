@@ -3,7 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { repo } from '../db/repo'
 import { parseRoster } from '../lib/roster'
-import type { Player } from '../types'
+import { STAFF_ROLES, addStaff, removeStaff, updateStaff } from '../lib/prep'
+import type { Player, Team } from '../types'
 
 function errorMessage(e: unknown) {
   return e instanceof Error ? e.message : 'Er ging iets mis'
@@ -93,6 +94,7 @@ export default function TeamsPage() {
             key={selected.id}
             teamId={selected.id}
             name={selected.name}
+            team={selected}
             run={run}
             onDeleted={() => setSelectedId(null)}
           />
@@ -108,11 +110,13 @@ export default function TeamsPage() {
 function TeamDetail({
   teamId,
   name,
+  team,
   run,
   onDeleted,
 }: {
   teamId: string
   name: string
+  team: Team
   run: (fn: () => Promise<unknown>) => Promise<void>
   onDeleted: () => void
 }) {
@@ -121,6 +125,7 @@ function TeamDetail({
     [teamId],
   )
   const [teamName, setTeamName] = useState(name)
+  const [shortName, setShortName] = useState(team.shortName ?? '')
 
   return (
     <div className="space-y-4">
@@ -135,6 +140,20 @@ function TeamDetail({
               const n = teamName.trim()
               if (n && n !== name) void run(() => repo.renameTeam(teamId, n))
               else setTeamName(name)
+            }}
+          />
+        </label>
+        <label className="label w-32">
+          Korte naam
+          <input
+            className="field"
+            value={shortName}
+            maxLength={4}
+            placeholder="Bijv. EHV"
+            onChange={(e) => setShortName(e.target.value.toUpperCase())}
+            onBlur={() => {
+              const s = shortName.trim()
+              if (s !== (team.shortName ?? '')) void run(() => repo.updateTeam(teamId, { shortName: s || undefined }))
             }}
           />
         </label>
@@ -170,12 +189,95 @@ function TeamDetail({
           <NewPlayerRow teamId={teamId} run={run} />
         </tbody>
       </table>
+      <StaffSection team={team} run={run} />
       <RosterImport teamId={teamId} existing={players?.map((p) => p.number) ?? []} run={run} />
     </div>
   )
 }
 
 type Run = (fn: () => Promise<unknown>) => Promise<void>
+
+/** Coaches and other staff: they can get a card or a 2-minute suspension. */
+function StaffSection({ team, run }: { team: Team; run: Run }) {
+  const [name, setName] = useState('')
+  const [role, setRole] = useState(STAFF_ROLES[0])
+  const staff = team.staff ?? []
+  const save = (next: NonNullable<Team['staff']>) => run(() => repo.updateTeam(team.id, { staff: next }))
+
+  return (
+    <section className="space-y-2" aria-label="Staf">
+      <h3 className="section-title">Staf en trainers</h3>
+      {staff.length === 0 && <p className="text-sm text-slate-500">Nog geen staf.</p>}
+      <ul className="space-y-2">
+        {staff.map((s) => (
+          <li key={s.id} className="flex flex-wrap items-center gap-2">
+            <input
+              className="field min-w-0 flex-1"
+              aria-label={`Naam van ${s.name}`}
+              defaultValue={s.name}
+              onBlur={(e) => {
+                const n = e.target.value.trim()
+                if (n && n !== s.name) void save(updateStaff(staff, s.id, { name: n }))
+                else e.target.value = s.name
+              }}
+            />
+            <select
+              className="field w-auto"
+              aria-label={`Rol van ${s.name}`}
+              value={s.role}
+              onChange={(e) => void save(updateStaff(staff, s.id, { role: e.target.value }))}
+            >
+              {[...new Set([...STAFF_ROLES, s.role])].map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+            <button
+              className="btn"
+              aria-label={`Verwijder ${s.name}`}
+              onClick={() => void save(removeStaff(staff, s.id))}
+            >
+              ✕
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (!name.trim()) return
+          void save(addStaff(staff, name, role, crypto.randomUUID()))
+          setName('')
+        }}
+      >
+        <input
+          className="field min-w-0 flex-1"
+          placeholder="Naam staflid"
+          aria-label="Naam nieuw staflid"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <select
+          className="field w-auto"
+          aria-label="Rol nieuw staflid"
+          value={role}
+          onChange={(e) => setRole(e.target.value)}
+        >
+          {STAFF_ROLES.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        <button className="btn btn-primary" type="submit">
+          Toevoegen
+        </button>
+      </form>
+    </section>
+  )
+}
 
 function PlayerRow({ player, run }: { player: Player; run: Run }) {
   const [num, setNum] = useState(String(player.number))

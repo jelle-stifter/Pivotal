@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { Fragment, useState, type FormEvent } from 'react'
 import { useNow } from '../hooks/useNow'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
@@ -10,7 +10,9 @@ import LiveLink from '../components/LiveLink'
 import ScorerPicker from '../components/ScorerPicker'
 import { useMemberships } from '../hooks/useAccess'
 import { isViewerOnly } from '../lib/access'
-import type { MatchFormat } from '../types'
+import MatchPrep from '../components/MatchPrep'
+import { OPPONENT_COLOR } from '../lib/ownTeam'
+import type { Side } from '../types'
 
 function today() {
   const d = new Date()
@@ -40,7 +42,10 @@ export default function MatchesPage() {
   const [awayId, setAwayId] = useState('')
   const [date, setDate] = useState(today())
   const [location, setLocation] = useState('')
-  const [format, setFormat] = useState<MatchFormat>(2)
+  const [time, setTime] = useState('')
+  const [ownSide, setOwnSide] = useState<Side>('home')
+  const [opponentColor, setOpponentColor] = useState(OPPONENT_COLOR.main)
+  const [prepId, setPrepId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   const teamName = (id: string) => teams?.find((t) => t.id === id)?.name ?? '?'
@@ -55,12 +60,15 @@ export default function MatchesPage() {
         homeTeamId: homeId,
         awayTeamId: awayId,
         date,
+        time: time || undefined,
         location: location.trim() || undefined,
-        format,
+        ownSide,
+        opponentColor,
       })
       setHomeId('')
       setAwayId('')
       setLocation('')
+      setTime('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Er ging iets mis')
     }
@@ -187,6 +195,15 @@ export default function MatchesPage() {
                 />
               </label>
               <label className="label">
+                Tijdstip (optioneel)
+                <input
+                  className="field"
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                />
+              </label>
+              <label className="label">
                 Plaats (optioneel)
                 <input
                   className="field"
@@ -198,28 +215,37 @@ export default function MatchesPage() {
             </div>
             <div className="flex flex-wrap items-end justify-between gap-4">
               <fieldset>
-                <legend className="label mb-1">Indeling</legend>
+                <legend className="label mb-1">HVM speelt</legend>
                 <div className="segmented" role="radiogroup">
                   <label>
                     <input
                       type="radio"
-                      name="format"
-                      checked={format === 2}
-                      onChange={() => setFormat(2)}
+                      name="ownSide"
+                      checked={ownSide === 'home'}
+                      onChange={() => setOwnSide('home')}
                     />
-                    2 helften
+                    Thuis
                   </label>
                   <label>
                     <input
                       type="radio"
-                      name="format"
-                      checked={format === 3}
-                      onChange={() => setFormat(3)}
+                      name="ownSide"
+                      checked={ownSide === 'away'}
+                      onChange={() => setOwnSide('away')}
                     />
-                    3 derden
+                    Uit
                   </label>
                 </div>
               </fieldset>
+              <label className="label">
+                Kleur tegenstander
+                <input
+                  className="field w-24 p-1"
+                  type="color"
+                  value={opponentColor}
+                  onChange={(e) => setOpponentColor(e.target.value)}
+                />
+              </label>
               <button className="btn btn-primary" type="submit">
                 Wedstrijd aanmaken
               </button>
@@ -262,8 +288,12 @@ export default function MatchesPage() {
                   )
                   const label = `${teamName(m.homeTeamId)} – ${teamName(m.awayTeamId)}`
                   return (
-                    <tr key={m.id}>
-                      <td className="whitespace-nowrap">{formatDate(m.date)}</td>
+                    <Fragment key={m.id}>
+                    <tr>
+                      <td className="whitespace-nowrap">
+                        {formatDate(m.date)}
+                        {m.time ? <span className="text-slate-500"> {m.time}</span> : null}
+                      </td>
                       <td className="font-semibold">
                         {label}
                         <ScorerPicker match={m} />
@@ -295,6 +325,16 @@ export default function MatchesPage() {
                         </a>
                         {!viewerOnly && (
                           <button
+                            className="btn mr-2"
+                            aria-expanded={prepId === m.id}
+                            aria-label={`Voorbereiding ${label}`}
+                            onClick={() => setPrepId(prepId === m.id ? null : m.id)}
+                          >
+                            Voorbereiding
+                          </button>
+                        )}
+                        {!viewerOnly && (
+                          <button
                             className="btn btn-danger"
                             aria-label={`Verwijder wedstrijd ${label}`}
                             onClick={() => void remove(m.id, label)}
@@ -304,6 +344,14 @@ export default function MatchesPage() {
                         )}
                       </td>
                     </tr>
+                    {prepId === m.id && (
+                      <tr>
+                        <td colSpan={6} className="bg-slate-50">
+                          <MatchPrep match={m} />
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   )
                 })}
               </tbody>

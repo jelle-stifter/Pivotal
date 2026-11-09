@@ -137,3 +137,31 @@ describe('Dexie migration to version 3', () => {
     expect(appDb.verno).toBe(3)
   })
 })
+
+describe('team staff and short name', () => {
+  it('stores a short name and staff members on the team', async () => {
+    const t = await repo.addTeam('Eindhoven')
+    await repo.updateTeam(t.id, {
+      shortName: 'EHV',
+      staff: [{ id: 's1', name: 'Kees', role: 'Eerste trainer' }],
+    })
+    expect(await db.teams.get(t.id)).toMatchObject({
+      name: 'Eindhoven',
+      shortName: 'EHV',
+      staff: [{ id: 's1', name: 'Kees', role: 'Eerste trainer' }],
+    })
+  })
+  it('keeps the absence list and penalty takers on the match', async () => {
+    const s = await setup()
+    await repo.updateMatch(s.m.id, {
+      absent: { [s.hp.id]: 'blessure' },
+      penaltyTakers: [s.hk.id],
+      time: '14:30',
+    })
+    expect(await db.matches.get(s.m.id)).toMatchObject({
+      absent: { [s.hp.id]: 'blessure' },
+      penaltyTakers: [s.hk.id],
+      time: '14:30',
+    })
+  })
+})
