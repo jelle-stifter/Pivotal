@@ -5,6 +5,8 @@ import Court from '../components/Court'
 import { ACTION_META } from '../lib/actions'
 import { hasPosition } from '../lib/court'
 import { heatGrid } from '../lib/heat'
+import { playerProfile } from '../lib/playerProfile'
+import { positionLabel } from '../lib/positions'
 import {
   emptyTotals,
   formatPercentage,
@@ -42,8 +44,10 @@ export default function PlayerPage({ playerId }: { playerId: string }) {
 
   const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? '?'
   const own = actions.filter((a) => a.playerId === player.id)
-  const totals = playerTotals(own).get(player.id) ?? emptyTotals()
-  const matchIds = [...new Set(own.map((a) => a.matchId))]
+  // All actions count: an assist is logged on the goal of a team mate.
+  const profile = playerProfile(actions, player.id)
+  const totals = profile.totals
+  const matchIds = profile.matchIds
   const played = matches
     .filter((m) => matchIds.includes(m.id))
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -56,7 +60,8 @@ export default function PlayerPage({ playerId }: { playerId: string }) {
   const positioned = shown.filter(hasPosition)
 
   const perMatch = played.map((m) => {
-    const t = playerTotals(own.filter((a) => a.matchId === m.id)).get(player.id) ?? emptyTotals()
+    const t =
+      playerTotals(actions.filter((a) => a.matchId === m.id)).get(player.id) ?? emptyTotals()
     const opponent = m.homeTeamId === player.teamId ? m.awayTeamId : m.homeTeamId
     return { m, t, opponent }
   })
@@ -113,6 +118,71 @@ export default function PlayerPage({ playerId }: { playerId: string }) {
             <div className="tile-value">{totals.assist}</div>
             <div className="tile-sub">{totals.turnover + totals.bad_pass} balverlies</div>
           </div>
+        )}
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Details">
+        <StatList
+          title="Schieten"
+          rows={[
+            ['Doelpunten (veld)', profile.goals],
+            ['7m doelpunten', profile.penaltyGoals],
+            ['Schoten op doel', profile.shotsOnTarget],
+            ['Niet op doel', profile.shotsOffTarget],
+            ['Percentage', formatPercentage(profile.shotPct)],
+          ]}
+        />
+        <StatList
+          title="Aanval en verdediging"
+          rows={[
+            ['Assists', profile.assists],
+            ['Blocks', profile.blocks],
+            ['Onderscheppingen', profile.interceptions],
+            ['Balverlies', profile.turnovers],
+          ]}
+        />
+        <StatList
+          title="Fouten en straffen"
+          rows={[
+            ['Fouten', profile.fouls],
+            ['Gele kaarten', profile.yellow],
+            ['2 minuten', profile.suspensions],
+            ['Rode kaarten', profile.red],
+            ['Blauwe kaarten', profile.blue],
+          ]}
+        />
+        <StatList
+          title="Penalty's"
+          rows={[
+            ['Genomen', profile.penalties.taken],
+            ['Raak', profile.penalties.scored],
+            ['Gestopt', profile.penalties.saved],
+            ['Niet op doel', profile.penalties.offTarget],
+            ['Gekregen', profile.penalties.won],
+            ['Veroorzaakt', profile.penalties.caused],
+          ]}
+        />
+        <StatList
+          title="Doelpunten per positie"
+          rows={
+            profile.goalsPerPosition.length === 0
+              ? [['Nog geen doelpunten met positie', '']]
+              : profile.goalsPerPosition.map((g) => [positionLabel(g.code), g.goals])
+          }
+        />
+        {isKeeper && (
+          <StatList
+            title="Keeper"
+            rows={[
+              ['Stops', gk.saves],
+              ['Tegendoelpunten', gk.goalsConceded],
+              ['Stop%', formatPercentage(gk.savePercentage)],
+              ['7m gestopt', gk.penaltySaves],
+              ['7m tegen', gk.penaltyGoalsConceded],
+              ['7m stop%', formatPercentage(gk.penaltySavePercentage)],
+              ['Totaal stop%', formatPercentage(gk.totalSavePercentage)],
+            ]}
+          />
         )}
       </section>
 
@@ -194,6 +264,23 @@ export default function PlayerPage({ playerId }: { playerId: string }) {
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+/** A small card with label / value rows. */
+function StatList({ title, rows }: { title: string; rows: [string, string | number][] }) {
+  return (
+    <div className="tile">
+      <div className="tile-label">{title}</div>
+      <dl className="mt-1 space-y-0.5 text-sm">
+        {rows.map(([label, value]) => (
+          <div key={label} className="flex justify-between gap-3">
+            <dt className="text-slate-600">{label}</dt>
+            <dd className="font-semibold tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   )
 }

@@ -14,15 +14,15 @@ function peak(grid: number[][]) {
 describe('heatGrid', () => {
   it('returns an all-zero grid of the requested size for empty input', () => {
     const g = heatGrid([])
-    expect(g).toHaveLength(20)
-    expect(g[0]).toHaveLength(40)
+    expect(g).toHaveLength(40)
+    expect(g[0]).toHaveLength(80)
     expect(g.flat().every((v) => v === 0)).toBe(true)
   })
   it('peaks in the cell that contains a single point', () => {
-    // cell (col 10, row 5) has its centre at x=10.5/40, y=5.5/20
-    const g = heatGrid([{ x: 10.5 / 40, y: 5.5 / 20 }])
+    // cell (col 20, row 10) has its centre at x=20.5/80, y=10.5/40
+    const g = heatGrid([{ x: 20.5 / 80, y: 10.5 / 40 }])
     const p = peak(g)
-    expect(p).toEqual({ r: 5, c: 10, v: 1 })
+    expect(p).toEqual({ r: 10, c: 20, v: 1 })
   })
   it('normalizes the maximum to exactly 1', () => {
     const g = heatGrid([
@@ -39,7 +39,7 @@ describe('heatGrid', () => {
       { x: 0.25, y: 0.5 },
       { x: 0.75, y: 0.5 },
     ])
-    expect(g[10][10]).toBeGreaterThan(g[10][30])
+    expect(g[20][20]).toBeGreaterThan(g[20][60])
   })
   it('handles points on the edges without crashing', () => {
     const g = heatGrid([
@@ -51,5 +51,15 @@ describe('heatGrid', () => {
   it('ignores invalid points', () => {
     const g = heatGrid([{ x: Number.NaN, y: 0.5 }])
     expect(g.flat().every((v) => v === 0)).toBe(true)
+  })
+})
+
+describe('heatGrid resolution', () => {
+  it('uses cells of half a metre (finer than the old 1 m blocks)', () => {
+    const g = heatGrid([{ x: 0.5, y: 0.5 }])
+    expect(g).toHaveLength(40)
+    expect(g[0]).toHaveLength(80)
+    // 20 m wide / 40 rows = 0.5 m per row
+    expect(20 / g.length).toBe(0.5)
   })
 })

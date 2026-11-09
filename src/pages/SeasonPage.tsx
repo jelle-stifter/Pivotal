@@ -8,6 +8,7 @@ import { downloadText } from '../lib/download'
 import {
   filterSeasonMatches,
   matchResults,
+  ownVersusOpponent,
   recordOf,
   seasonPlayerRows,
   seasonsOf,
@@ -94,7 +95,7 @@ export default function SeasonPage() {
   const teamsInMatches = [
     ...new Set(matches.flatMap((m) => [m.homeTeamId, m.awayTeamId])),
   ]
-  const goalsTotal = results.reduce((s, r) => s + r.homeGoals + r.awayGoals, 0)
+  const versus = ownVersusOpponent(results)
 
   function exportCsv() {
     downloadText(
@@ -179,10 +180,13 @@ export default function SeasonPage() {
               </>
             ) : (
               <>
-                <SummaryCard label="Doelpunten totaal" value={String(goalsTotal)} />
+                <SummaryCard
+                  label="Doelpunten eigen team – tegen"
+                  value={`${versus.for} – ${versus.against}`}
+                />
                 <SummaryCard
                   label="Gemiddeld per wedstrijd"
-                  value={(goalsTotal / Math.max(selected.length, 1)).toFixed(1)}
+                  value={`${(versus.for / Math.max(selected.length, 1)).toFixed(1)} – ${(versus.against / Math.max(selected.length, 1)).toFixed(1)}`}
                 />
               </>
             )}
@@ -198,6 +202,7 @@ export default function SeasonPage() {
                     <th>Thuis</th>
                     <th>Uit</th>
                     <th className="text-center">Uitslag</th>
+                    <th className="text-center">Eigen team</th>
                     <th className="text-center">Rust</th>
                     {teamId && <th>Resultaat</th>}
                     <th className="no-print" />
@@ -211,6 +216,9 @@ export default function SeasonPage() {
                       <td className="font-semibold">{teamName(r.awayTeamId)}</td>
                       <td className="text-center font-bold tabular-nums">
                         {r.homeGoals} – {r.awayGoals}
+                      </td>
+                      <td className="text-center tabular-nums">
+                        {r.ownGoals} tegen {r.opponentGoals}
                       </td>
                       <td className="text-center tabular-nums text-slate-600">
                         {r.half ? `${r.half.home} – ${r.half.away}` : '–'}

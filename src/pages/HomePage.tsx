@@ -7,7 +7,7 @@ import { backupFileName, createBackup, parseBackup, restoreBackup } from '../db/
 import ScoreHero from '../components/ScoreHero'
 import { downloadText } from '../lib/download'
 import { liveMatchIds, topScorers } from '../lib/analysis'
-import { seasonOf } from '../lib/season'
+import { matchResults, ownVersusOpponent, seasonOf } from '../lib/season'
 import { scoreByPeriod, score } from '../lib/stats'
 import LiveLink from '../components/LiveLink'
 import { useMemberships } from '../hooks/useAccess'
@@ -60,9 +60,13 @@ export default function HomePage() {
   const seasonActions = actions.filter((a) => seasonMatchIds.has(a.matchId))
   const scorers = topScorers(seasonActions, 5)
   const maxGoals = scorers[0]?.total ?? 1
-  const goalsTotal = seasonActions.filter(
-    (a) => a.type === 'goal' || a.type === 'penalty_goal',
-  ).length
+  // Our own team against the opponents (e.g. 5 against 3), not both teams added up.
+  const versus = ownVersusOpponent(
+    matchResults(
+      matches.filter((m) => seasonMatchIds.has(m.id)),
+      seasonActions,
+    ),
+  )
 
   const resultOf = (matchId: string, homeId: string, awayId: string) =>
     score(
@@ -177,7 +181,11 @@ export default function HomePage() {
 
           <section className="grid gap-4 grid-cols-2 lg:grid-cols-4" aria-label="Samenvatting">
             <Tile label="Wedstrijden" value={matches.length} sub={season ? `seizoen ${season}: ${seasonMatchIds.size}` : ''} />
-            <Tile label="Doelpunten" value={goalsTotal} sub={`dit seizoen`} />
+            <Tile
+              label="Doelpunten"
+              value={`${versus.for} – ${versus.against}`}
+              sub="eigen team – tegenstander, dit seizoen"
+            />
             <Tile label="Teams" value={teams.length} sub={`${players.length} spelers`} />
             <Tile label="Acties" value={actions.length} sub="geregistreerd" />
           </section>
@@ -341,7 +349,7 @@ export default function HomePage() {
   )
 }
 
-function Tile({ label, value, sub }: { label: string; value: number; sub: string }) {
+function Tile({ label, value, sub }: { label: string; value: number | string; sub: string }) {
   return (
     <div className="tile">
       <div className="tile-label">{label}</div>

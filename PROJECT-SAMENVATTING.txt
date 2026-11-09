@@ -98,3 +98,52 @@ beide op localhost:5173. Start de app met: npm.cmd run dev
 - Nieuwste versie opnieuw bouwen en naar Netlify slepen
   (bij bouwen op Netlify: VITE_SUPABASE_URL en VITE_SUPABASE_KEY instellen)
 - Client secret van Google roteren (stond eerder in de chat)
+
+10. TABLET-LIVE-PAGINA (zes fases, laatste commit zie git log)
+--------------------------------------------------------------
+Doel: de coach scoort live langs de lijn op een tablet (1440x820, geen
+scrollen, grote knoppen). Alles in Nederlands; HVM is altijd het eigen team.
+
+Wat is er nieuw
+- Live-pagina (src/pages/LivePage.tsx + src/components/live/): aftelklok 30:00
+  per helft, stand met korte namen, helftvakje (min/plus), straflijst,
+  topscorerspaneel, uitgebreide knoppenset voor HVM, simpele voor de tegenstander,
+  Geel / 2 Min / Rood / Blauw, Ongedaan maken, Wedstrijd beeindigen.
+- Scorestromen (src/lib/flows.ts): doelpunt, 7 meter met rebound, kaarten en
+  2 minuten, stappen per keuze op het scherm. Een flow slaat meerdere acties op
+  met 1 groupId; Ongedaan maken haalt ze samen weg.
+- Datamodel (src/types.ts, SCHEMA_VERSION 2): actietypes block en off_target;
+  op Action: position, assistId, fouledId, foulerId, staffId, rebound, groupId;
+  op Team: shortName, staff; op Match: ownSide, time, opponentColor, absent,
+  penaltyTakers. Alles zit in de bestaande jsonb: GEEN SQL-migratie nodig.
+- Dexie versie 3 (src/db/schema.ts): oude wedstrijden krijgen ownSide 'home'.
+  De upgrade komt niet in de outbox.
+- Klok (src/lib/clock.ts): Match.clockMs blijft de doorlopende speeltijd;
+  half 2 begint bij 30:00. Constanten voor de 3 open klantvragen staan daar:
+  TRACK_SUBSTITUTIONS (nee), PENALTY_TIME_DISPLAY ('played'),
+  PENALTY_CARRIES_OVER (ja).
+- Voorbereiding (src/components/MatchPrep.tsx, src/lib/prep.ts): spelende en
+  niet-spelende spelers met reden, top 3 penaltyschutters, spelers van de
+  tegenstander. Teams: korte naam en staf met rol.
+- Overzicht en Seizoen: eigen team tegen tegenstander (bijv. 5 - 3).
+- Heatmap: raster van 80 x 40 (halve meter) in plaats van 40 x 20.
+- Spelerspagina (src/lib/playerProfile.ts): doelpunten, schoten op doel, %,
+  assists, blocks, fouten, kaarten, straffen, penalty's, doelpunten per positie,
+  keeperstatistieken, wedstrijden en heatmap.
+- CSV: acties-export heeft extra kolommen (position_code, assist_by, fouled,
+  fouler, staff_member, rebound); spelers-export heeft block en off_target.
+
+Keuzes die je moet weten
+- Posities en keepers zijn grote knoppen in plaats van een uitklaplijst
+  (sneller op een tablet).
+- Een positiecode zet ook een x/y-punt op de actie (src/lib/positions.ts),
+  zodat de heatmap nieuwe doelpunten blijft tonen. Het veld aanklikken is
+  vervallen op het live-scherm.
+- Een assist die bij een doelpunt is ingevuld telt als assist voor die speler
+  (src/lib/stats.ts).
+- Toetsenbordbediening van het oude live-scherm is vervallen.
+
+Open punten
+- Het live-scherm is wel in de browser bekeken (1440x820 en telefoonbreedte) maar
+  nog niet op een echt tablet of met twee apparaten tegelijk getest.
+- Pushen en deployen naar Netlify is nog niet gedaan.

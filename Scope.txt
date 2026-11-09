@@ -1,0 +1,89 @@
+OPDRACHT: TABLET-LIVE-PAGINA, SCORESTROMEN EN WEDSTRIJDVOORBEREIDING
+=====================================================================
+
+## Objective
+Vervang in de Backhand-app (handbalstatistiek-PWA voor club HVM) de oude live-pagina door een nieuwe tablet-live-pagina, breid de scoringsflows, de wedstrijdvoorbereiding en de teamrollen uit, en pas overzicht, heatmap en spelerspagina aan. De coach scoort live langs de lijn op een tablet, dus snelheid en grote aanraakdoelen zijn het doel.
+
+## Context
+- Repo: github.com/jelle-stifter/Pivotal (app heet Backhand, repo/pakket heet nog pivotal). Stack: Vite 8, React 19, TypeScript, Tailwind 4, Dexie 4 (IndexedDB), vite-plugin-pwa, Supabase (Postgres, RLS, Google-login). Hash-routing: #/home, #/matches, #/match/:id, #/stats/:id, #/teams, #/season, #/account, #/login.
+- Offline-first: elke wijziging gaat eerst naar Dexie. Dexie-hooks zetten wijzigingen in een outbox, die elke 15 s naar Supabase gaat (src/lib/syncEngine.ts, src/lib/sync.ts). Supabase slaat rijen op als data-jsonb. Rechten: coach, assistent, speler; spelers zien alleen hun eigen team en nooit het live-scherm (src/lib/access.ts, src/lib/cloud.ts, supabase/schema.sql en 002 t/m 006).
+- Bestaand: 17 actietypes in src/types.ts (ACTION_TYPES), src/lib/actions.ts, stats.ts, analysis.ts, csv.ts, heat.ts, Court.tsx, 151 vitest-tests, README.md (verouderd), PROJECT-SAMENVATTING.txt, DEMO.txt, Scope.txt (leeg).
+
+## Scope
+- Werk alleen in: src/, supabase/ (alleen NIEUWE bestanden, 007_ en hoger), README.md, PROJECT-SAMENVATTING.txt, Scope.txt en testbestanden.
+- Raak NIET aan: .env.local, package-lock.json, vite.config.ts, public/, bestaande supabase/00x en schema.sql, het uiterlijk van HomePage, SeasonPage en SheetPage (indeling en stijl blijven gelijk; alleen de inhoud die hieronder genoemd wordt mag veranderen).
+
+## Constraints
+- MUST: offline-first, outbox-sync en RLS blijven werken; bestaande data blijft leesbaar (verhoog SCHEMA_VERSION en schrijf een Dexie-migratie).
+- MUST: alle UI-teksten in het Nederlands; MUST: het label "Fouten last" letterlijk zo laten.
+- NEVER: nieuwe dependencies toevoegen zonder te vragen.
+- Alleen wijzigen wat gevraagd is. Geen extra features, abstracties of bestanden.
+- Gebruik npm.cmd (Windows PowerShell blokkeert npm.ps1).
+
+## Action Boundaries
+- Ga door met omkeerbare, in-scope inspectie, edits en validatie.
+- STOP en vraag voordat je: bestanden verwijdert (behalve src/pages/LivePage.tsx, dat mag vervangen worden), dependencies toevoegt, destructieve databasewijzigingen doet, SQL tegen de echte database uitvoert (schrijf migraties alleen als bestanden; de gebruiker draait ze zelf in de Supabase SQL Editor), pusht of deployt, of een eis botst met de bestaande RLS/rechten.
+- STOP en rapporteer na 3 mislukte pogingen op dezelfde fout.
+- Voor de drie open klantvragen onderaan: NIET vragen, gebruik de standaard en zet de keuze in één constante met een TODO.
+
+## Specificatie: nieuwe live-pagina (vervangt LivePage.tsx, route #/match/:id)
+Tablet liggend (ongeveer 1440x820), geen scrollen, aanraakdoelen minstens 44px; op telefoon moet het bruikbaar blijven. Donkergrijze achtergrond (ongeveer #2a2c30), lettertype system-ui.
+
+HVM is altijd het eigen team. Per wedstrijd is er een instelling "HVM thuis of uit". De uitgebreide knoppenset staat aan de kant van HVM (thuis: links, uit: rechts); stand, namen en topscorers volgen die kant. Kleuren: HVM teal (#0f766e, accent #5eead4), tegenstander oranje (#e2711d, accent #fdba74) of de teamkleur van de tegenstander uit de wedstrijdinvoer.
+
+- Linksboven: grote Start/Stop/Pauze-knop (groen bij Start, rood bij Stop). Ernaast een aftelklok van 30:00 naar 0:00. Altijd 2 helften van 30 minuten; de optie 3 derden vervalt (bestaande data blijft werken). Op 0:00 springt de klok terug naar 30:00 en blijft stilstaan; de gebruiker drukt zelf weer op Start.
+- Midden bovenaan: blok "Stand" met korte teamnamen en scores (bijvoorbeeld HVM 45 | EHV 31), met Thuis en Uit plus teamnaam ernaast. Voeg per team een korte naam toe.
+- Direct onder de stand: klein helftvakje met min en plus ("1e helft" / "2e helft"); plus gaat naar de 2e helft, min terug; de knop in de uiterste stand is gedimd. Bij helftwissel gaat de klok terug naar 30:00 (gepauzeerd).
+- Uitgebreide set (HVM): Doelpunt, 7 meter, Miss, Niet op doel; groep "Fouten last": Pass fout, Technische fout, Onderschepping; daaronder Block. Block is een save van een veldspeler (blokkeert het schot op doel): nieuw actietype "block".
+- Simpele set (tegenstander): Doelpunt, Stop, Niet op doel, 7 meter.
+- Onderaan een rij: Geel, 2 Min, Rood, Blauw.
+- Rechts een zijpaneel met topscorers: bovenaan "Tegenstander", eronder "Eigen team". Per speler: nummer, doelpunten/schoten op doel, percentage (4/4 = 100%) en de positie waar de meeste doelpunten van die speler vandaan komen (bijvoorbeeld "Rechtshoek"); dit is NIET zijn speelpositie.
+- Rechtsboven bij de teamnaam van de uitploeg: knop Ongedaan maken. Helemaal rechtsonder: Wedstrijd beëindigen.
+- Midden onder de stand: lijst met lopende 2-minutenstraffen, bijvoorbeeld "#12 uit 6:10, terug 8:10, nog 1:30". De aftelling loopt samen met Start/Stop en staat stil als de klok stilstaat.
+
+## Specificatie: flows (elke stap is een keuze op het scherm; spelers kies je op nummer of naam)
+- Eigen team scoort: Doelpunt, speler, positie (dropdown), assistgever. De assist mag leeg blijven (icoon "geen assist").
+- Tegenstander scoort: Doelpunt, welke eigen keeper het binnen kreeg (dropdown met alle keepers, elke keer opnieuw), rugnummer of naam tegenstander, positie (dropdown). Staat het rugnummer niet in de lijst, voeg het direct toe (bijvoorbeeld 7 na een wissel van 6).
+- Penalty voor eigen team: 7 meter, op welke eigen speler de fout gebeurde, welke tegenstander de fout maakte, penaltynemer (top 3 als snelkeuze), uitkomst: Doelpunt, Niet op doel of Stop. Bij Stop: rebound of bal naar de tegenstander; bij een rebound kies je een nieuwe schutter (mag een ander zijn) met uitkomst Doelpunt, Mis of Niet op doel.
+- Penalty tegen eigen team: 7 meter (uitkant), welke tegenstander de fout onderging, welke eigen speler de fout maakte, penaltynemer tegenstander, uitkomst: Doelpunt, Niet op doel of Stop. Bij Stop kies je welke eigen keeper stopte; daarna rebound of bal terug met uitkomst Doelpunt, Mis of Niet op doel.
+- Miss, Niet op doel, Pass fout, Technische fout, Onderschepping, Block: alleen een eigen speler kiezen.
+- 2 minuten: speler of staflid (coach, stafleden, spelers), tijdstip is de huidige klok, start een 2-minutenaftelling.
+- Geel, Rood, Blauw: knop, welk team, welke speler of staflid.
+- Posities (dropdown en opslag): Links Hoek (LH), Rechts Hoek (RH), Links opbouw (LO), Rechts opbouw (RO), Midden (M), Cirkel (C), Keeper (K), 2e Cirkel (CC), Break (Br), Penalty 7 meter (P). Positie alleen vragen bij een doelpunt.
+
+## Specificatie: voor de start van de wedstrijd
+- Wedstrijd aanmaken: datum, tijdstip, locatie, 2 teams, "HVM thuis of uit", teamkleur tegenstander.
+- Eigen team: spelende spelers selecteren; niet-spelende spelers met reden (Afwezig, Blessure, Niet in selectie). De coach kiest vóór de wedstrijd zelf de top 3 penaltyschutters (niet automatisch).
+- Tegenstander: spelerslijst met rugnummer en eventueel positie; vaak vooraf onbekend, dus aanvullen tijdens de wedstrijd moet kunnen.
+- Per team zijn de rollen makkelijk aanpasbaar (eerste trainer, tweede trainer, assistent, enzovoort). Stafleden en trainers kunnen een 2-minutenstraf of kaart krijgen.
+
+## Specificatie: overige aanpassingen
+- Overzicht: toon per wedstrijd en per seizoen wat het eigen team scoorde tegenover de tegenstander (bijvoorbeeld 5 tegen 3), niet het totaal van beide teams ("8 doelpunten").
+- Heatmap: veel kleinere vakjes (fijn raster); de huidige blokken zijn te grof voor het kleine veld.
+- Spelerspagina: alle informatie die over een speler af te leiden is (doelpunten, schoten, percentage, assists, blokken, fouten, kaarten, straffen, penalty's, doelpunten per positie, keeperstatistieken, wedstrijden, heatmap).
+
+## Specificatie: datamodel en techniek
+- Breid src/types.ts uit (block, penalty-details, positiecode, optionele assist, rebound, teamkleur, korte naam, HVM thuis/uit, stafrollen, penaltytop-3, niet-spelend met reden). Controleer alle plekken waar ActionType gebruikt wordt (actions.ts, stats.ts, analysis.ts, csv.ts, enzovoort) en werk ze bij, inclusief CSV-export.
+- Supabase: gebruik waar mogelijk de bestaande data-jsonb; voeg waar nodig één genummerde migratie toe (supabase/007_...sql) met RLS die de bestaande rechten respecteert (alleen coach en assistent schrijven, spelers lezen alleen).
+
+## Open klantvragen (nog niet beantwoord; gebruik de standaard)
+1. Wissels tijdens de wedstrijd bijhouden? Standaard: nee.
+2. Straftijd tonen als gespeelde minuten in de helft ("uit 6:10, terug 8:10") of als kloktijd? Standaard: gespeelde minuten.
+3. Loopt een straf vlak voor het einde van een helft door in de volgende helft? Standaard: ja.
+(De standaarden staan als constanten in src/lib/clock.ts: TRACK_SUBSTITUTIONS, PENALTY_TIME_DISPLAY, PENALTY_CARRIES_OVER.)
+
+## Werkwijze en checkpoints
+1. Plan: post een plan van maximaal 15 regels (datamodel en migratie) en ga door zonder te wachten.
+2. Voer uit in fases: (1) datamodel, migraties en logica met tests, (2) nieuwe live-pagina, (3) flows, (4) wedstrijdvoorbereiding en rollen, (5) overzicht, heatmap en spelerspagina, (6) README.md en PROJECT-SAMENVATTING.txt bijwerken en Scope.txt vullen met deze opdracht.
+3. Draai na elke fase npm.cmd run build, npm.cmd test en npm.cmd run lint. Maak daarna één commit en geef een status van maximaal 3 regels.
+
+## Acceptance Criteria
+- [ ] npm.cmd run build, npm.cmd test en npm.cmd run lint slagen, met alle 151 bestaande tests groen plus nieuwe tests voor klok, straffen, flows en statistieken.
+- [ ] #/match/:id toont de nieuwe live-pagina; LivePage.tsx is vervangen.
+- [ ] Alle knoppen, flows, het zijpaneel, Ongedaan maken, Wedstrijd beëindigen en de straflijst staan zoals beschreven; de klok telt af van 30:00 en stopt bij 0:00.
+- [ ] HVM thuis/uit wisselt de kant van de uitgebreide set.
+- [ ] Offline scoren werkt en synchroniseert via de outbox; bestaande data blijft werken na de migratie.
+- [ ] Overzicht toont gescoord tegenover tegen; de heatmap is fijner; de spelerspagina toont de uitgebreide informatie.
+
+## Progress Evidence
+Meld voortgang alleen bij een checkpoint of wijziging. Onderbouw elke "klaar"-claim met een toolresultaat (testoutput, buildresultaat, gewijzigd bestand).

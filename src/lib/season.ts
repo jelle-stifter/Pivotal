@@ -1,3 +1,4 @@
+import { ownSide } from './ownTeam'
 import { emptyTotals, score, scoreByPeriod, type Totals } from './stats'
 import type { Action, Match } from '../types'
 
@@ -78,6 +79,9 @@ export interface MatchResult {
   awayGoals: number
   /** Half-time score; only for matches played in 2 halves. */
   half: { home: number; away: number } | null
+  /** What our own team (HVM) scored against what the opponent scored. */
+  ownGoals: number
+  opponentGoals: number
   /** From the point of view of `teamId`, when one was given. */
   result?: ResultLetter
   goalsFor?: number
@@ -103,6 +107,8 @@ export function matchResults(
       awayTeamId: m.awayTeamId,
       homeGoals: s.home,
       awayGoals: s.away,
+      ownGoals: ownSide(m) === 'home' ? s.home : s.away,
+      opponentGoals: ownSide(m) === 'home' ? s.away : s.home,
       half,
     }
     if (teamId !== undefined) {
@@ -114,6 +120,17 @@ export function matchResults(
     }
     return r
   })
+}
+
+/** Our own team against the opponents over these matches (e.g. 5 against 3), not both teams added up. */
+export function ownVersusOpponent(results: Pick<MatchResult, 'ownGoals' | 'opponentGoals'>[]): {
+  for: number
+  against: number
+} {
+  return {
+    for: results.reduce((s, r) => s + r.ownGoals, 0),
+    against: results.reduce((s, r) => s + r.opponentGoals, 0),
+  }
 }
 
 export interface SeasonRecord {

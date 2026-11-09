@@ -2,7 +2,7 @@
 
 Handbal wedstrijdstatistieken. Registreer tijdens de wedstrijd goals, schoten, balverlies, saves, onderscheppingen en fouten per speler en team, bekijk daarna de statistieken en exporteer naar Excel.
 
-Fase 1 draait in de browser en als geïnstalleerde Windows-app. Alle gegevens blijven lokaal in je browser, er is geen server of account nodig.
+De app draait in de browser en als geïnstalleerde app. Alles werkt lokaal en offline; met een account (Supabase) kunnen coaches, assistenten en spelers van een team samenwerken en synchroniseert alles automatisch zodra er internet is. Zonder account is er geen server nodig.
 
 ## Starten (ontwikkelen)
 
@@ -44,28 +44,46 @@ De app werkt daarna volledig **offline**. Nieuwe versies worden automatisch opge
 1. **Teams**: maak teams aan en voeg spelers toe (rugnummer, naam, positie, keeper).
    Rugnummers zijn uniek per team. Onder "Spelerslijst plakken" importeer je een hele lijst in één keer
    (`nummer;naam;positie;K`, ook rechtstreeks uit Excel te plakken).
-2. **Wedstrijden**: maak een wedstrijd (thuis, uit, datum, plaats) en kies 2 helften of 3 derden.
-3. **Live**: registreer acties met toetsenbord of muis.
+2. **Wedstrijden**: maak een wedstrijd (thuis, uit, datum, tijdstip, plaats, HVM thuis of uit, kleur tegenstander). Een wedstrijd heeft altijd 2 helften van 30 minuten.
+3. **Live**: registreer acties op het tablet-scherm (zie hieronder).
 4. **Statistieken**: filter op team, speler, actie en periode. Exporteer naar CSV.
 
-### Toetsen op het live-scherm
+### Het live-scherm (tablet)
 
-| Toets | Actie |
+Het live-scherm is gemaakt voor een tablet liggend langs de lijn: grote knoppen, geen scrollen, donkere achtergrond. Op een telefoon blijft het bruikbaar (de kolommen komen onder elkaar).
+
+- **Klok**: linksboven Start/Stop met een aftelklok van 30:00 naar 0:00. Altijd 2 helften. Op 0:00 stopt de klok en springt hij terug naar 30:00; ga met **+** naar de 2e helft (de klok blijft dan op 30:00 staan tot je op Start drukt). Met **−** ga je terug.
+- **Stand** (midden boven): korte teamnamen, Thuis/Uit en de score. Eronder het helftvakje en de lijst met lopende **2-minutenstraffen** (`#12 uit 6:10, terug 8:10, nog 1:30`). De straftijd loopt mee met de klok en staat stil als de klok stilstaat.
+- **HVM is altijd het eigen team.** Per wedstrijd stel je in of HVM thuis of uit speelt. Aan die kant staat de uitgebreide knoppenset (Doelpunt, 7 meter, Miss, Niet op doel, Fouten last: Pass fout / Technische fout / Onderschepping, en Block). De tegenstander heeft de simpele set (Doelpunt, Stop, Niet op doel, 7 meter).
+- **Onderaan**: Geel, 2 Min, Rood, Blauw. Rechtsboven bij de uitploeg **Ongedaan maken** (een penalty met rebound gaat in één keer terug), rechtsonder **Wedstrijd beëindigen**.
+- **Rechts**: topscorers van de tegenstander en van het eigen team, met doelpunten/schoten op doel, percentage en de positie waar de meeste doelpunten vandaan kwamen.
+- Elke knop start een korte reeks keuzes (spelers kies je op nummer of naam; een onbekend rugnummer van de tegenstander voeg je direct toe). Zie *Scorestromen* hieronder.
+
+#### Scorestromen
+
+| Knop | Stappen |
 |---|---|
-| cijfers | rugnummer van het actieve team (Enter bevestigt direct) |
-| `G` `S` `T` `V` `I` `F` | goal, schot, balverlies, save, onderschepping, fout |
-| `A` | assist |
-| `Shift+G` / `Shift+S` / `Shift+V` | 7m doelpunt / 7m niet op doel / 7m gestopt |
-| `W` | 7m gekregen |
-| `P` / `X` | passfout / technische fout |
-| `Y` `M` `R` `B` | gele kaart, 2 minuten, rode kaart, blauwe kaart |
-| `Tab` of `←` `→` | actief team wisselen |
-| `Spatie` | klok start/pauze |
-| `N` | volgende periode |
-| `Ctrl+Z` | laatste actie ongedaan maken |
-| `Esc` | selectie en positie wissen |
+| Doelpunt (eigen team) | speler, positie, assistgever (mag leeg) |
+| Doelpunt (tegenstander) | eigen keeper die hem binnen kreeg, tegenstander, positie |
+| 7 meter (eigen team) | speler die de fout onderging, tegenstander die de fout maakte, penaltynemer (top 3 als snelkeuze), uitkomst: Doelpunt / Niet op doel / Stop. Bij Stop: rebound of bal naar de tegenstander; bij een rebound een nieuwe schutter met Doelpunt / Mis / Niet op doel |
+| 7 meter (tegenstander) | tegenstander die de fout onderging, eigen speler die de fout maakte, penaltynemer, uitkomst. Bij Stop: welke eigen keeper, daarna rebound of bal terug |
+| Miss, Niet op doel, Pass fout, Technische fout, Onderschepping, Block | alleen een eigen speler |
+| Stop (tegenstander) | welke eigen keeper stopte |
+| 2 Min / Geel / Rood / Blauw | welk team, speler of staflid; bij 2 Min start de aftelling |
 
-Een save zonder gekozen speler wordt toegekend aan de keeper op het veld. Stel per team onder "Keeper op het veld" in wie dat is; een goal en de 7m-uitkomsten (doelpunt, gestopt, niet op doel) worden automatisch toegekend aan de keeper van de tegenstander die dan op het veld staat. 7m-doelpunten tellen mee op het scorebord.
+Posities: Links Hoek (LH), Rechts Hoek (RH), Links opbouw (LO), Rechts opbouw (RO), Midden (M), Cirkel (C), Keeper (K), 2e Cirkel (CC), Break (Br), Penalty 7 meter (P). De positie wordt alleen bij een doelpunt gevraagd (een 7 meter-doelpunt is automatisch P). Elke code heeft een vaste plek op het veld, zodat de heatmap ook nieuwe doelpunten laat zien.
+
+Een goal en de 7m-uitkomsten worden toegekend aan de eigen keeper die je bij de stroom kiest; die keeper blijft daarna de keeper op het veld. 7m-doelpunten tellen mee op het scorebord.
+
+#### Voor de wedstrijd
+
+- **Wedstrijden → Nieuwe wedstrijd**: datum, tijdstip, plaats, de twee teams, *HVM speelt thuis/uit* en de kleur van de tegenstander (standaard oranje; HVM is teal).
+- **Wedstrijden → Voorbereiding** (ook op het live-scherm): selecteer wie speelt; niet-spelende spelers krijgen een reden (Afwezig, Blessure, Niet in selectie). Kies zelf de top 3 penaltyschutters. Vul de spelerslijst van de tegenstander aan (rugnummer, naam en positie optioneel); dat kan ook tijdens de wedstrijd.
+- **Teams**: per team een korte naam (voor het scorebord) en de staf met rol (eerste trainer, tweede trainer, assistent, ...). Stafleden en trainers kunnen een 2-minutenstraf of kaart krijgen.
+
+#### Instellingen die nog open staan
+
+In `src/lib/clock.ts` staat per open klantvraag één constante: `TRACK_SUBSTITUTIONS` (wissels bijhouden: nee), `PENALTY_TIME_DISPLAY` (straftijd als gespeelde minuten) en `PENALTY_CARRIES_OVER` (een straf loopt door in de volgende helft: ja).
 
 ### Percentages
 
@@ -80,7 +98,8 @@ Een save zonder gekozen speler wordt toegekend aan de keeper op het veld. Stel p
 ### Statistiekenscherm en spelerspagina
 
 - Bovenaan staat de scorekop met eindstand en ruststand, daarna een **vergelijking** van beide teams (balken) en het **scoreverloop** met de topscorers van de wedstrijd.
-- Klik op een speler (Overzicht, Seizoen of topscorers) voor de **spelerspagina**: totalen, schot% of stop%, heatmap per actie en alle wedstrijden.
+- Het **Overzicht** en het **Seizoen** tonen wat het eigen team scoorde tegenover de tegenstander (bijvoorbeeld 5 tegen 3), niet het totaal van beide teams.
+- Klik op een speler (Overzicht, Seizoen of topscorers) voor de **spelerspagina**: doelpunten, schoten op doel en percentage, assists, blocks, onderscheppingen, balverlies, fouten, kaarten en straffen, penalty's (genomen, raak, gestopt, gekregen, veroorzaakt), doelpunten per positie, keeperstatistieken, een fijne heatmap en alle wedstrijden.
 - Een wedstrijd telt als **live** zolang de laatste actie minder dan 3 uur geleden is, tenzij je hem met **Wedstrijd beëindigen** (live-scherm) hebt afgerond. **Heropenen** zet hem terug. Live wedstrijden staan op het Overzicht en hebben een badge in de lijst.
 
 ### Back-up
@@ -93,7 +112,7 @@ Onder **Statistieken** staan twee knoppen: alle acties en spelersstatistieken. D
 
 Het spelersbestand heeft de oorspronkelijke kolommen vooraan; de nieuwe acties, `total_goals`, `shot_percentage` en de 7m-keeperwaarden staan erachter.
 
-Het acties-bestand eindigt met `court_x_pct` en `court_y_pct`: de positie op het veld als geheel getal 0–100, vanuit het aanvalsperspectief van het team dat de actie deed (x=100 is het doel van de tegenstander, y loopt over de breedte). Leeg als er geen positie is opgeslagen.
+Het acties-bestand heeft `court_x_pct` en `court_y_pct`: de positie op het veld als geheel getal 0–100, vanuit het aanvalsperspectief van het team dat de actie deed (x=100 is het doel van de tegenstander, y loopt over de breedte). Leeg als er geen positie is opgeslagen. Daarachter staan `position_code` (LH, RH, ...), `assist_by`, `fouled`, `fouler`, `staff_member` en `rebound`. Het spelersbestand heeft ook kolommen voor `block` en `off_target`.
 
 ## Gegevens en back-up
 
@@ -101,7 +120,7 @@ Gegevens staan in IndexedDB van de browser (per browser en per apparaat). Wis je
 
 ## Stack
 
-React, TypeScript, Vite, Dexie (IndexedDB), Tailwind CSS, Vitest, vite-plugin-pwa.
+React, TypeScript, Vite, Dexie (IndexedDB), Tailwind CSS, Vitest, vite-plugin-pwa en Supabase (inloggen, teamrollen en synchronisatie; de app blijft offline werken).
 
 ## Nog niet in fase 1
 

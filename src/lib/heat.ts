@@ -1,15 +1,21 @@
 import type { Point } from './court'
 
+/** Fine grid: 80 x 40 cells of half a metre (the court is 40 x 20 m). */
+export const HEAT_COLS = 80
+export const HEAT_ROWS = 40
+/** Blur radius in cells (3 cells = 1.5 m). */
+export const HEAT_SIGMA = 3
+
 /**
  * Gaussian-kernel density on a cols x rows grid over the unit court.
  * Returns grid[row][col], normalized so the maximum is 1 (all zeros when
- * there are no valid points). `sigma` is in grid cells (1 cell = 1 m).
+ * there are no valid points). `sigma` is in grid cells (1 cell = 0.5 m).
  */
 export function heatGrid(
   points: Point[],
-  cols = 40,
-  rows = 20,
-  sigma = 2,
+  cols = HEAT_COLS,
+  rows = HEAT_ROWS,
+  sigma = HEAT_SIGMA,
 ): number[][] {
   const grid = Array.from({ length: rows }, () => new Array<number>(cols).fill(0))
   const twoSigmaSq = 2 * sigma * sigma
