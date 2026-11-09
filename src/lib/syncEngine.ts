@@ -4,7 +4,7 @@ import type { Match } from '../types'
 import { myMemberships, type Membership } from './cloud'
 import { loadMemberships } from './membershipCache'
 import { supabase } from './supabase'
-import { deleteIds, fail, pullAll, sb, upsertAll } from './sync'
+import { deleteIds, fail, pruneDeleted, pullAll, sb, upsertAll } from './sync'
 
 /**
  * Automatic sync (step 3).
@@ -240,6 +240,8 @@ export function startSyncEngine(): () => void {
         const full = cursor === undefined || cycleNo % FULL_PULL_EVERY === 0
         const r = await pullAll(playerOnly, full ? undefined : cursor)
         cursor = r.cursor ?? cursor
+        // Incremental pulls cannot see deletions: check the ids every round (cheap).
+        if (!full) await pruneDeleted(playerOnly)
       }
       setStatus({ state: 'idle', pending: await db.outbox.count(), lastSyncAt: Date.now() })
     } catch (e) {

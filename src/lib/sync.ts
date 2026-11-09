@@ -1,6 +1,7 @@
 import Dexie from 'dexie'
 import { db, remoteTransactions } from '../db/schema'
 import { SCHEMA_VERSION, type Action, type Match, type Player } from '../types'
+import { loadMemberships } from './membershipCache'
 import { supabase } from './supabase'
 
 /**
@@ -13,6 +14,54 @@ import { supabase } from './supabase'
 const CHUNK = 500
 const PAGE = 1000
 export const IN_CHUNK = 100
+
+/**
+ * Matches I am scoring on THIS device right now: their running clock and
+ * edits must not be overwritten by an (older) copy from the server.
+ * A running clock that was merely copied from someone else does not count.
+ */
+export function matchesScoredHere(matches: Match[], uid: string | null): Set<string> {
+  if (!uid) return new Set()
+  return new Set(
+    matches
+      .filter((m) => m.clockStartedAt !== undefined && !m.finishedAt && m.liveBy === uid)
+      .map((m) => m.id),
+  )
+}
+
+/**
+ * For a match I am scoring here, only the "who is scoring" fields may come in
+ * from the server, and only when they are newer (another person took over).
+ */
+export function lockPatch(local: Match, remote: Match): Partial<Match> | null {
+  if ((remote.liveAt ?? 0) <= (local.liveAt ?? 0) || remote.liveBy === local.liveBy) return null
+  return { liveBy: remote.liveBy, liveByName: remote.liveByName, liveAt: remote.liveAt }
+}
+
+/** Fetch one match fresh from the server (before opening the live screen). */
+export async function refreshMatch(matchId: string): Promise<void> {
+  const { data, error } = await sb()
+    .from('matches')
+    .select('id, data, scorer_id')
+    .eq('id', matchId)
+    .maybeSingle()
+  fail(error)
+  if (!data) return
+  const uid = loadMemberships().uid
+  await db.transaction('rw', [db.matches, db.outbox], async () => {
+    remoteTransactions.add(Dexie.currentTransaction as object)
+    // A change of mine that is still waiting for upload wins.
+    if (await db.outbox.get(`matches:${matchId}`)) return
+    const remote = { ...(data.data as Match), scorerId: (data.scorer_id as string | null) ?? undefined }
+    const local = await db.matches.get(matchId)
+    if (local && matchesScoredHere([local], uid).has(matchId)) {
+      const patch = lockPatch(local, remote)
+      if (patch) await db.matches.update(matchId, patch)
+      return
+    }
+    await db.matches.put(remote)
+  })
+}
 
 export interface PushResult {
   players: number
@@ -173,6 +222,65 @@ export async function pushTeam(teamId: string, onlineTeamIds: Set<string>): Prom
   return { players: players.length, matches: matches.length, actions: actions.length }
 }
 
+/** Ids that exist on the server (what is left after deletions). */
+export interface RemoteIds {
+  players: Set<string>
+  matches: Set<string>
+  actions: Set<string>
+}
+
+/**
+ * Removes local rows of the given (player-only) teams that no longer exist on
+ * the server. Call inside a transaction that covers these tables + outbox.
+ * Rows with a local change waiting for upload are left alone.
+ */
+export async function pruneLocal(teamIds: string[], remote: RemoteIds): Promise<void> {
+  const own = new Set(teamIds)
+  const pending = new Set((await db.outbox.toArray()).map((e) => e.key))
+  const free = (table: string, id: string) => !pending.has(`${table}:${id}`)
+
+  const localPlayers = await db.players.where('teamId').anyOf(teamIds).toArray()
+  await db.players.bulkDelete(
+    localPlayers.filter((p) => !remote.players.has(p.id) && free('players', p.id)).map((p) => p.id),
+  )
+
+  const localMatches = (await db.matches.toArray()).filter(
+    (m) => own.has(m.homeTeamId) || own.has(m.awayTeamId),
+  )
+  const goneMatches = localMatches
+    .filter((m) => !remote.matches.has(m.id) && free('matches', m.id))
+    .map((m) => m.id)
+  await db.matches.bulkDelete(goneMatches)
+  await db.actions.where('matchId').anyOf(goneMatches).delete()
+
+  const keptIds = localMatches.filter((m) => remote.matches.has(m.id)).map((m) => m.id)
+  const localActions = await db.actions.where('matchId').anyOf(keptIds).toArray()
+  await db.actions.bulkDelete(
+    localActions.filter((a) => !remote.actions.has(a.id) && free('actions', a.id)).map((a) => a.id),
+  )
+}
+
+/**
+ * Cheap deletion check (only ids are fetched), run every sync round so that
+ * something the coach deleted disappears for players within seconds.
+ */
+export async function pruneDeleted(playerOnlyTeamIds: string[]): Promise<void> {
+  if (playerOnlyTeamIds.length === 0) return
+  const [players, matches, actions] = await Promise.all([
+    fetchAll<{ id: string }>('players', 'id'),
+    fetchAll<{ id: string }>('matches', 'id'),
+    fetchAll<{ id: string }>('actions', 'id'),
+  ])
+  await db.transaction('rw', [db.players, db.matches, db.actions, db.outbox], async () => {
+    remoteTransactions.add(Dexie.currentTransaction as object)
+    await pruneLocal(playerOnlyTeamIds, {
+      players: new Set(players.map((r) => r.id)),
+      matches: new Set(matches.map((r) => r.id)),
+      actions: new Set(actions.map((r) => r.id)),
+    })
+  })
+}
+
 /**
  * Download everything this account may see. Never deletes on staff devices.
  * On devices where I am only a player of a team, rows that were removed on
@@ -206,11 +314,7 @@ export async function pullAll(
     // match whose clock is running on this device.
     const pending = new Set((await db.outbox.toArray()).map((e) => e.key))
     const free = (table: string, id: string) => !pending.has(`${table}:${id}`)
-    const runningHere = new Set(
-      (await db.matches.filter((m) => m.clockStartedAt !== undefined && !m.finishedAt).toArray()).map(
-        (m) => m.id,
-      ),
-    )
+    const runningHere = matchesScoredHere(await db.matches.toArray(), loadMemberships().uid)
 
     await db.teams.bulkPut(
       teams
@@ -225,25 +329,20 @@ export async function pullAll(
     )
     await db.actions.bulkPut(actions.filter((a) => free('actions', a.id)).map((a) => a.data))
 
+    // A match I am scoring is not overwritten, but I do hear when someone takes over.
+    for (const id of runningHere) {
+      const remote = matches.find((m) => m.id === id)
+      const local = await db.matches.get(id)
+      const patch = remote && local ? lockPatch(local, remote.data) : null
+      if (patch) await db.matches.update(id, patch)
+    }
+
     if (playerOnlyTeamIds.length > 0 && !since) {
-      const own = new Set(playerOnlyTeamIds)
-      const remotePlayers = new Set(players.map((p) => p.id))
-      const remoteMatches = new Set(matches.map((m) => m.id))
-      const remoteActions = new Set(actions.map((a) => a.id))
-
-      const localPlayers = await db.players.where('teamId').anyOf(playerOnlyTeamIds).toArray()
-      await db.players.bulkDelete(localPlayers.filter((p) => !remotePlayers.has(p.id)).map((p) => p.id))
-
-      const localMatches = (await db.matches.toArray()).filter(
-        (m) => own.has(m.homeTeamId) || own.has(m.awayTeamId),
-      )
-      const goneMatches = localMatches.filter((m) => !remoteMatches.has(m.id)).map((m) => m.id)
-      await db.matches.bulkDelete(goneMatches)
-      await db.actions.where('matchId').anyOf(goneMatches).delete()
-
-      const keptIds = localMatches.filter((m) => remoteMatches.has(m.id)).map((m) => m.id)
-      const localActions = await db.actions.where('matchId').anyOf(keptIds).toArray()
-      await db.actions.bulkDelete(localActions.filter((a) => !remoteActions.has(a.id)).map((a) => a.id))
+      await pruneLocal(playerOnlyTeamIds, {
+        players: new Set(players.map((p) => p.id)),
+        matches: new Set(matches.map((m) => m.id)),
+        actions: new Set(actions.map((a) => a.id)),
+      })
     }
   })
 

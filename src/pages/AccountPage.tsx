@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
 import { pullAll, pushTeam } from '../lib/sync'
+import { useDisplayName } from '../hooks/useDisplayName'
+import { useSyncStatus } from '../hooks/useSyncStatus'
+import { syncNow } from '../lib/syncEngine'
+import { checkName, MAX_NAME } from '../lib/profile'
 import {
   createTeam,
   joinTeam,
@@ -119,6 +123,9 @@ export default function AccountPage() {
         </p>
       )}
 
+      <NameSection />
+      <SyncSection />
+
       <section aria-labelledby="mine">
         <h3 id="mine" className="mb-3 text-lg font-semibold">
           Teams
@@ -222,6 +229,100 @@ export default function AccountPage() {
         </form>
       </section>
     </div>
+  )
+}
+
+function SyncSection() {
+  const s = useSyncStatus()
+  const text =
+    s.state === 'offline'
+      ? `Offline. ${s.pending} wijziging(en) wachten tot er internet is.`
+      : s.state === 'error'
+        ? `Er ging iets mis: ${s.message || 'onbekende fout'}`
+        : s.state === 'syncing'
+          ? 'Bezig met synchroniseren…'
+          : s.pending > 0
+            ? `${s.pending} wijziging(en) worden verstuurd.`
+            : 'Alles is gesynchroniseerd.'
+  const last = s.lastSyncAt ? new Date(s.lastSyncAt).toLocaleTimeString('nl-NL') : null
+  return (
+    <section aria-labelledby="syncstatus">
+      <h3 id="syncstatus" className="mb-1 text-lg font-semibold">
+        Synchronisatie
+      </h3>
+      <p role="status" className="mb-2 text-sm text-slate-600">
+        {text}
+        {last && <> Laatst: {last}.</>}
+      </p>
+      {s.message && s.state !== 'error' && (
+        <p className="mb-2 text-sm text-amber-700">{s.message}</p>
+      )}
+      <button type="button" className={btn} style={{ background: 'var(--brand)' }} onClick={() => syncNow()}>
+        Nu synchroniseren
+      </button>
+    </section>
+  )
+}
+
+function NameSection() {
+  const { name, save } = useDisplayName()
+  const [draft, setDraft] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const value = draft ?? name
+
+  async function submit(e: FormEvent) {
+    e.preventDefault()
+    const checked = checkName(value)
+    if ('error' in checked) return setMessage({ ok: false, text: checked.error })
+    setBusy(true)
+    setMessage(null)
+    try {
+      await save(checked.name)
+      setDraft(null)
+      setMessage({ ok: true, text: `Opgeslagen. Je heet nu ${checked.name}.` })
+    } catch (err) {
+      setMessage({ ok: false, text: errorMessage(err) })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section aria-labelledby="myname">
+      <h3 id="myname" className="mb-1 text-lg font-semibold">
+        Mijn naam
+      </h3>
+      <p className="mb-3 text-sm text-slate-600">
+        Zo zien je teamgenoten jou, bijvoorbeeld in de ledenlijst en bij "… scoort al". Kies de naam
+        die bij jouw rol past, zoals Robin als coach.
+      </p>
+      <form onSubmit={submit} className="flex gap-2">
+        <input
+          aria-label="Mijn naam"
+          value={value}
+          maxLength={MAX_NAME}
+          onChange={(e) => setDraft(e.target.value)}
+          className={input}
+        />
+        <button
+          type="submit"
+          disabled={busy || value.trim() === name}
+          className={btn}
+          style={{ background: 'var(--brand)' }}
+        >
+          {busy ? 'Opslaan…' : 'Opslaan'}
+        </button>
+      </form>
+      {message && (
+        <p
+          role={message.ok ? 'status' : 'alert'}
+          className={`mt-2 text-sm ${message.ok ? 'text-emerald-800' : 'text-red-700'}`}
+        >
+          {message.text}
+        </p>
+      )}
+    </section>
   )
 }
 

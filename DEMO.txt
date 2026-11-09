@@ -1,0 +1,111 @@
+BACKHAND: DEMO
+==============
+
+Doel: in ongeveer 10 minuten laten zien wat Backhand kan. Je hebt twee
+vensters nodig:
+  Venster A  = coach (Incognito-venster, hoofdaccount)
+  Venster B  = speler (gewoon venster, tweede Google-account)
+Adres: http://localhost:5173  (of https://backhand.netlify.app)
+
+
+VOORBEREIDING (vooraf, 5 minuten)
+---------------------------------
+1. Supabase leeg maken: voer supabase/reset_data.sql uit (SQL Editor).
+2. In elk venster: F12 > Application > Storage > "Clear site data".
+3. Log in venster A in als coach en kies bij Online > Mijn naam: Robin.
+4. Log in venster B in als speler en kies bij Online > Mijn naam: Jelle.
+5. Maak in venster A de twee teams en de spelers (zie hieronder).
+6. Zet het team online en noteer de teamcode.
+
+
+GEGEVENS OM TE PLAKKEN
+----------------------
+Teams (Teams > Nieuw team):
+  Backhand Test
+  Tegenstander
+
+Spelers van Backhand Test (Teams > "Spelerslijst plakken"):
+1;Keeper Bas;Keeper;K
+7;Daan Dijk;Rechtsachter
+9;Sam Smit;Linksbuiten
+11;Noor Nijs;Cirkelloper
+14;Lars Lind;Rechtsbuiten
+
+Spelers van Tegenstander:
+1;Keeper Kees;Keeper;K
+5;Piet Peters;Linksachter
+8;Jan Jansen;Rechtsbuiten
+10;Mark Maas;Cirkelloper
+12;Tom Tuin;Linksbuiten
+
+Wedstrijd (Wedstrijden > Nieuwe wedstrijd):
+  Thuis: Backhand Test   Uit: Tegenstander
+  Plaats: Sporthal Test  Indeling: 2 helften
+
+
+DEMOVERLOOP
+-----------
+1. TEAM ONLINE ZETTEN (A)
+   Online > Team online zetten > Backhand Test > Upload naar online.
+   Zeg: "Mijn team staat nu online. Spelers melden zich aan met een code."
+
+2. SPELER MELDT ZICH AAN (B)
+   B: Online > code invullen > Aanmelden.
+   A: Online > Goedkeuren.
+   B: Online > Ophalen.
+   Zeg: "Een speler ziet pas iets nadat de coach hem goedkeurt."
+
+3. SPELER ZIET ALLEEN STATISTIEKEN (B)
+   B: Wedstrijden. Wijs aan: geen Live-knop, geen nieuwe wedstrijd.
+   Zeg: "Een gewone speler kijkt alleen mee, hij kan niets aanpassen."
+
+4. LIVE SCOREN (A)
+   A: Wedstrijden > Live > Start.
+   Typ het rugnummer en een toets:
+     7 + G   (doelpunt Daan)
+     9 + G   (doelpunt Sam)
+     1 1 + S (schot Noor)
+   Klik op "Tegenstander", typ 8 + G (doelpunt Jan).
+   Stand: 2 - 1.
+   Zeg: "Het scoren gaat met rugnummer en een toets, of met aantikken."
+
+5. DE SPELER ZIET HET MEE (B)
+   B: Statistieken van de wedstrijd. Binnen 15 seconden staan de acties er.
+   Zeg: "Zonder iets te klikken komt de stand binnen."
+
+6. KLOK LOOPT DOOR (A)
+   A: klik op Statistieken en dan op Wedstrijden.
+   De rode balk "Terug naar live" staat boven aan en de klok loopt door.
+
+7. OFFLINE SCOREN (A)
+   Zet het internet uit (F12 > Network > Offline, of Wi-Fi uit).
+   Log 2 acties (14 + G en 7 + S). Rechtsboven: "Offline, 2 wachten".
+   Zet het internet weer aan: na ±15 seconden staat alles ook bij B.
+   Zeg: "Geen internet in de sporthal? Geen probleem. Het wordt later verstuurd."
+
+8. COACH KAN NIET KOMEN (A en B)
+   A: bij de wedstrijd bij "Scorer" kiezen: Jelle.
+   B: Online > Ophalen. Nu heeft B een Live-knop voor alleen deze wedstrijd.
+   B opent Live terwijl A scoort: "Robin scoort al" met "Overnemen".
+   Zeg: "Zo kan een speler of ouder het overnemen als de coach er niet is."
+
+9. UITSLAG DELEN (A)
+   A: Statistieken > Delen. Plak in de teamchat.
+
+10. AFSLUITEN (A)
+    A: Live > Wedstrijd beeindigen. Klok stopt, B ziet "Beeindigd".
+
+
+VEEL GESTELDE VRAGEN
+--------------------
+- Werkt het zonder internet?
+  Ja. Scoren werkt altijd, de gegevens worden verstuurd zodra er internet is.
+- Wat ziet een speler?
+  Alleen de statistieken van het eigen team, nooit het live scherm.
+- Wie mag scoren?
+  Coach en assistent altijd. Een speler alleen als de coach dat aanzet
+  ("Mag scoren") of hem aanwijst voor een wedstrijd.
+- Kunnen twee mensen tegelijk scoren?
+  Nee, de tweede krijgt "[naam] scoort al" en kan alleen overnemen.
+- Kan ik het op mijn telefoon zetten?
+  Ja: Toevoegen aan beginscherm, of de link "App installeren" onderaan.

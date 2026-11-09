@@ -15,6 +15,8 @@ import { onlineEnabled, supabase } from './lib/supabase'
 import { saveMemberships } from './lib/membershipCache'
 import { startSyncEngine } from './lib/syncEngine'
 import { useSyncStatus } from './hooks/useSyncStatus'
+import { useDisplayName } from './hooks/useDisplayName'
+import { useInstallPrompt } from './hooks/useInstallPrompt'
 
 const ROUTES = [
   { path: '#/home', label: 'Overzicht' },
@@ -37,6 +39,8 @@ export default function App() {
   const hash = useHash()
   const { session } = useAuth()
   const sync = useSyncStatus()
+  const { name: myName } = useDisplayName()
+  const installApp = useInstallPrompt()
   const userId = session?.user.id
 
   // Automatic sync while logged in (also queues changes made without internet).
@@ -85,6 +89,33 @@ export default function App() {
             <div className="ml-auto flex items-center gap-2 text-sm">
               {session ? (
                 <>
+                  <span
+                    className="hidden max-w-32 truncate font-semibold text-white sm:inline"
+                    title="Jouw naam (te wijzigen bij Online)"
+                  >
+                    {myName}
+                  </span>
+                  {sync.state !== 'idle' || sync.pending > 0 ? (
+                    <span
+                      className={`sm:hidden text-lg leading-none ${
+                        sync.state === 'error'
+                          ? 'text-red-400'
+                          : sync.state === 'offline'
+                            ? 'text-amber-300'
+                            : 'text-sky-300'
+                      }`}
+                      role="status"
+                      aria-label={
+                        sync.state === 'offline'
+                          ? `Offline, ${sync.pending} wijzigingen wachten`
+                          : sync.state === 'error'
+                            ? 'Synchronisatiefout'
+                            : 'Synchroniseren'
+                      }
+                    >
+                      ●
+                    </span>
+                  ) : null}
                   {sync.state !== 'idle' || sync.pending > 0 ? (
                     <span
                       className="hidden text-xs text-slate-300 sm:inline"
@@ -168,6 +199,14 @@ export default function App() {
       <footer className="app-footer">
         <strong>Backhand</strong> · handbalstatistieken · Gemaakt door{' '}
         <strong>Jelle Stifter</strong>
+        {installApp.canInstall && (
+          <>
+            {' · '}
+            <button type="button" className="font-semibold underline" onClick={() => void installApp.install()}>
+              App installeren
+            </button>
+          </>
+        )}
       </footer>
     </div>
   )

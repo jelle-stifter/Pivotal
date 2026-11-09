@@ -5,9 +5,11 @@ import { db } from '../db/schema'
 import { repo } from '../db/repo'
 import { useMatchClock } from '../hooks/useMatchClock'
 import { useMatchAccess, useMemberships } from '../hooks/useAccess'
-import { useAuth } from '../hooks/useAuth'
+import { useDisplayName } from '../hooks/useDisplayName'
 import { liveLockedByOther } from '../lib/access'
 import StatsPage from './StatsPage'
+import { useWakeLock } from '../hooks/useWakeLock'
+import { refreshMatch } from '../lib/sync'
 import ActionList, { type ActionPatch } from '../components/ActionList'
 import Court from '../components/Court'
 import { ACTION_GROUPS, ACTION_META, keyToAction } from '../lib/actions'
@@ -42,11 +44,25 @@ export default function LivePage({ matchId }: { matchId: string }) {
   const match = matches?.[0]
   const access = useMatchAccess(match)
   const { uid } = useMemberships()
-  const { session } = useAuth()
-  const myName =
-    (session?.user.user_metadata?.full_name as string | undefined) ??
-    session?.user.email ??
-    'Scorer'
+  // Before the live screen opens, ask the server who is scoring (the local copy can be old).
+  const [checked, setChecked] = useState(!uid)
+  useEffect(() => {
+    if (!uid) return
+    let alive = true
+    const done = () => alive && setChecked(true)
+    const timer = setTimeout(done, 3000)
+    refreshMatch(matchId)
+      .catch(() => undefined)
+      .finally(() => {
+        clearTimeout(timer)
+        done()
+      })
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [matchId, uid])
+  const { name: myName } = useDisplayName()
   const players = useLiveQuery(
     async () =>
       match
@@ -77,6 +93,8 @@ export default function LivePage({ matchId }: { matchId: string }) {
 
   // A normal player only sees statistics, never the live screen.
   if (access === 'view') return <StatsPage matchId={match.id} />
+
+  if (!checked) return <p className="py-6 text-center text-slate-500">Wedstrijd controleren…</p>
 
   // Someone else is scoring this match right now.
   const lockedBy = liveLockedByOther(match, uid, Date.now())
@@ -162,6 +180,9 @@ function LiveScreen({
   const clock = useMatchClock(match.clockMs, match.clockStartedAt, (patch) => {
     void repo.updateMatch(match.id, patch)
   })
+
+  // Keep the screen on while scoring.
+  useWakeLock(!match.finishedAt)
 
   // Tell others that I am scoring (advisory lock, refreshed while this screen is open).
   useEffect(() => {
