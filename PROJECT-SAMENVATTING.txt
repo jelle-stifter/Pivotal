@@ -1,0 +1,100 @@
+BACKHAND: PROJECTSAMENVATTING
+=============================
+(Handbal-statistiek-app. Eerder "Pivotal", hernoemd naar Backhand.)
+Live: https://backhand.netlify.app (handmatig slepen van de map `dist` in Netlify)
+Code: GitHub, branch main, laatste commit d8a2cb3
+
+
+1. WAT IS HET
+-------------
+Een PWA waarmee je tijdens een handbalwedstrijd live statistieken bijhoudt
+(doelpunten, schoten, enz. per speler), en daarna statistieken per wedstrijd,
+speler en seizoen bekijkt. Werkt offline in de sporthal en synchroniseert
+automatisch zodra er internet is.
+
+
+2. TECHNIEK
+-----------
+- Vite 8, React 19, TypeScript, Tailwind 4
+- Dexie 4 (IndexedDB) als lokale database, vite-plugin-pwa voor offline gebruik
+- Hash-routing: #/home, #/matches, #/match/:id, #/stats/:id, #/teams,
+  #/season, #/account, #/login
+- Tests: vitest + fake-indexeddb (ruim 150 tests, allemaal groen)
+- Supabase (Postgres, RLS, RPC's create_team en join_team, Google-login via PKCE)
+- Sleutels staan in .env.local (niet in git): VITE_SUPABASE_URL, VITE_SUPABASE_KEY
+
+
+3. WAT WERKT (door jou getest)
+------------------------------
+- Inloggen met Google
+- Team online zetten, aanmelden met teamcode, goedkeuren door coach
+- Rollen: coach, assistent, speler
+  * Speler ziet alleen statistieken van het eigen team, nooit het live scherm
+  * Coach en assistent mogen altijd scoren
+  * Speler mag scoren met de vlag "Mag scoren", of als scorer van een wedstrijd
+- Slot: "[naam] scoort al" met Overnemen; slot vervalt na 3 min zonder klok
+- Wedstrijdklok loopt door bij navigeren (rode balk "Terug naar live")
+- Automatische sync: wachtrij (outbox) voor offline, ophalen elke 15 s
+- Eigen weergavenaam per account (Online > Mijn naam)
+- Extra's: scherm blijft aan tijdens live, uitslag delen, app installeren,
+  privacypagina, nieuw logo en favicon
+- DEMO.txt met demoscript
+
+
+4. BELANGRIJKE BESTANDEN
+------------------------
+- supabase/schema.sql, 002 t/m 006 (handmatig uitgevoerd in SQL Editor)
+- supabase/reset_data.sql: wist alle teams, spelers, wedstrijden (accounts blijven)
+- src/db/schema.ts: Dexie-schema, outbox en hooks
+- src/lib/sync.ts en syncEngine.ts: ophalen, versturen, prune
+- src/lib/cloud.ts: teams, leden en rollen
+- src/lib/access.ts: wie mag scoren of alleen kijken
+- src/hooks/useMatchClock.ts: wedstrijdklok
+- src/pages/LivePage.tsx, AccountPage.tsx, MatchesPage.tsx, StatsPage.tsx
+- DEMO.txt: demoscript
+
+
+5. DESIGNKEUZES
+---------------
+- Offline-first: alles gaat eerst naar de lokale database; Dexie-hooks zetten
+  wijzigingen in een outbox die later naar Supabase gaat.
+- Geen online team betrokken = volledige lokale toegang, zonder inlog.
+- Rollen blijven offline werken via een cache in localStorage (wordt alleen
+  gewist bij expliciet uitloggen).
+- Klok werkt op kloktijd (start-tijdstip + opgebouwde ms), dus loopt door
+  tijdens navigeren.
+- Slot is adviserend (liveBy, liveByName, liveAt), geen harde beveiliging.
+
+
+6. TESTOPZET
+------------
+Venster A = Incognito (coach), venster B = gewoon Chrome-venster (speler),
+beide op localhost:5173. Start de app met: npm.cmd run dev
+(PowerShell blokkeert npm.ps1).
+
+
+7. OPNIEUW BEGINNEN
+-------------------
+1. Supabase: voer reset_data.sql uit in de SQL Editor.
+   (Optioneel: testaccounts verwijderen onder Authentication > Users.)
+2. Elk venster: F12 > Application > Storage > Clear site data
+   (voor elk adres: localhost:5173 en backhand.netlify.app).
+3. Opnieuw inloggen, namen kiezen, DEMO.txt volgen.
+
+
+8. BEKENDE BEPERKINGEN
+----------------------
+- Verwijderde wedstrijden komen bij coach/assistent-apparaten alleen via een
+  handmatige actie aan.
+- Teams-pagina is nog bewerkbaar voor kijkers (alleen lokaal, wordt overschreven).
+- Uitnodigen gaat met een code, nog geen link.
+- Offline opstarten van de app is alleen getest op de gedeployde versie.
+
+
+9. MOGELIJKE VERVOLGSTAPPEN
+---------------------------
+- Teams-pagina sluiten voor kijkers
+- Uitnodigingslink in plaats van code
+- Nieuwste versie opnieuw bouwen en naar Netlify slepen
+  (bij bouwen op Netlify: VITE_SUPABASE_URL en VITE_SUPABASE_KEY instellen)
+- Client secret van Google roteren (stond eerder in de chat)
