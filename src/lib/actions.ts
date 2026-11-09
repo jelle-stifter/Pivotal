@@ -18,16 +18,18 @@ export const ACTION_META: Record<ActionType, { label: string; key: string }> = {
   suspension: { label: '2 minuten', key: 'M' },
   red_card: { label: 'Rode kaart', key: 'R' },
   blue_card: { label: 'Blauwe kaart', key: 'B' },
+  block: { label: 'Block', key: 'L' },
+  off_target: { label: 'Niet op doel', key: 'O' },
 }
 
 /** How the live action pad is grouped (display only). */
 export const ACTION_GROUPS: { title: string; types: ActionType[] }[] = [
-  { title: 'Aanval', types: ['goal', 'shot', 'assist'] },
+  { title: 'Aanval', types: ['goal', 'shot', 'off_target', 'assist'] },
   {
     title: '7 meter',
     types: ['penalty_goal', 'penalty_miss', 'penalty_saved', 'penalty_won'],
   },
-  { title: 'Verdediging', types: ['save', 'interception'] },
+  { title: 'Verdediging', types: ['save', 'block', 'interception'] },
   {
     title: 'Fouten',
     types: ['turnover', 'bad_pass', 'technical_foul', 'foul'],
@@ -81,6 +83,8 @@ export const ACTION_COLOR: Record<ActionType, string> = {
   suspension: '#f97316',
   red_card: '#991b1b',
   blue_card: '#1d4ed8',
+  block: '#0e7490',
+  off_target: '#78716c',
 }
 
 const SHIFT_KEYS: Record<string, ActionType> = {

@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export type ActionType =
   | 'goal'
@@ -19,6 +19,9 @@ export type ActionType =
   | 'suspension' // 2 minuten
   | 'red_card'
   | 'blue_card'
+  // Added for the tablet live screen:
+  | 'block' // save door een veldspeler (blokkeert het schot op doel)
+  | 'off_target' // schot niet op doel
 
 /**
  * Order matters: the original six stay first so existing exports keep
@@ -42,14 +45,32 @@ export const ACTION_TYPES: ActionType[] = [
   'suspension',
   'red_card',
   'blue_card',
+  'block',
+  'off_target',
 ]
 
 export type MatchFormat = 2 | 3
 export type Side = 'home' | 'away'
 
+/** Court position of a goal (dropdown on the live screen). */
+export type PositionCode = 'LH' | 'RH' | 'LO' | 'RO' | 'M' | 'C' | 'K' | 'CC' | 'Br' | 'P'
+
+export type AbsenceReason = 'afwezig' | 'blessure' | 'niet_in_selectie'
+
+export interface StaffMember {
+  id: string
+  name: string
+  /** Free text; the Teams page offers presets (eerste trainer, assistent, ...). */
+  role: string
+}
+
 export interface Team {
   id: string
   name: string
+  /** Short name on the scoreboard (e.g. EHV); falls back to the first letters. */
+  shortName?: string
+  /** Coaches and other staff; they can get a card or a 2-minute suspension. */
+  staff?: StaffMember[]
   schemaVersion: number
 }
 
@@ -69,8 +90,20 @@ export interface Match {
   awayTeamId: string
   date: string // ISO date (yyyy-mm-dd)
   location?: string
+  /** Kick-off time (hh:mm). */
+  time?: string
+  /** New matches are always 2 halves; 3 only occurs in older data. */
   format: MatchFormat
+  /** Which side our own team (HVM) plays on; absent means home. */
+  ownSide?: Side
+  /** Colour of the opponent on the live screen (hex). */
+  opponentColor?: string
+  /** Own players that do not play, with the reason. Others are playing. */
+  absent?: Record<string, AbsenceReason>
+  /** The coach's own top 3 penalty takers (player ids, best first). */
+  penaltyTakers?: string[]
   currentPeriod: number // 1-based
+  /** Time played in the current period (ms); the live screen counts down from the half length. */
   clockMs: number
   activeGoalkeeper: { home?: string; away?: string } // player ids
   /** Which way the home team attacks on screen; absent means true. */
@@ -115,6 +148,19 @@ export interface Action {
    */
   x?: number
   y?: number
+  /** Position code of a goal (LH, RH, ...). */
+  position?: PositionCode
+  /** Set on goals: the player who gave the assist (empty = no assist). */
+  assistId?: string
+  /** Penalties: the player who was fouled and the player who fouled. */
+  fouledId?: string
+  foulerId?: string
+  /** Set for staff members (cards / suspensions); playerId is then ''. */
+  staffId?: string
+  /** True for the shot after a stopped penalty (rebound). */
+  rebound?: boolean
+  /** Actions that were logged in one flow share this id (undo removes all). */
+  groupId?: string
   schemaVersion: number
 }
 

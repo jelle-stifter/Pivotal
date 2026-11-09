@@ -46,7 +46,7 @@ describe('repo', () => {
     expect(act.period).toBe(2)
     expect(act.matchClockMs).toBe(61000)
     expect(act.videoTimeMs).toBeNull()
-    expect(act.schemaVersion).toBe(1)
+    expect(act.schemaVersion).toBe(2)
   })
 
   it('stores the opposing active goalkeeper on goals and keeps it after a keeper change', async () => {

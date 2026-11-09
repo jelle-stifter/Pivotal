@@ -75,7 +75,7 @@ describe('actionsCsv', () => {
   const lines = strip(actionsCsv({ match, teams, players, actions })).trim().split('\r\n')
   it('has English headers', () => {
     expect(lines[0]).toBe(
-      'date;home_team;away_team;period;match_time;team;shirt_number;player;action;goalkeeper_conceded;court_x_pct;court_y_pct',
+      'date;home_team;away_team;period;match_time;team;shirt_number;player;action;goalkeeper_conceded;court_x_pct;court_y_pct;position_code;assist_by;fouled;fouler;staff_member;rebound',
     )
   })
   it('has one row per action in match order', () => {
@@ -87,9 +87,9 @@ describe('actionsCsv', () => {
   it('escapes team and player names and credits the goalkeeper on goals', () => {
     expect(lines[1]).toContain('"Gasten; HC"')
     expect(lines[1]).toContain('"Jan ""De Man"" Jansen"')
-    // columns: ...;action;goalkeeper_conceded;court_x_pct;court_y_pct
-    expect(lines[1].endsWith(';goal;Aron Keeper;;')).toBe(true)
-    expect(lines[2].endsWith(';save;;;')).toBe(true)
+    // columns: ...;action;goalkeeper_conceded;court_x_pct;court_y_pct;(6 new, empty here)
+    expect(lines[1].endsWith(';goal;Aron Keeper;;;;;;;;')).toBe(true)
+    expect(lines[2].endsWith(';save;;;;;;;;;')).toBe(true)
   })
   it('keeps the original columns first and appends the position columns', () => {
     const cols = lines[0].split(';')
@@ -97,10 +97,13 @@ describe('actionsCsv', () => {
       'date', 'home_team', 'away_team', 'period', 'match_time',
       'team', 'shirt_number', 'player', 'action', 'goalkeeper_conceded',
     ])
-    expect(cols.slice(10)).toEqual(['court_x_pct', 'court_y_pct'])
+    expect(cols.slice(10)).toEqual([
+      'court_x_pct', 'court_y_pct',
+      'position_code', 'assist_by', 'fouled', 'fouler', 'staff_member', 'rebound',
+    ])
   })
   it('leaves the position empty when none was recorded', () => {
-    for (const row of lines.slice(1)) expect(row.endsWith(';;')).toBe(true)
+    for (const row of lines.slice(1)) expect(row.endsWith(';;;;;;;;')).toBe(true)
   })
   it('writes the position as whole percentages, only for positioned actions', () => {
     // `actions` is declared as [hgk save 01:30, h7 goal 01:01, agk save 02:00]
@@ -114,9 +117,9 @@ describe('actionsCsv', () => {
       actionsCsv({ match, teams, players, actions: withPos }),
     ).trim().split('\r\n')
     // CSV is in match order: 01:01 goal, 01:30 save, 02:00 save
-    expect(out[1].endsWith(';goal;Aron Keeper;90;30')).toBe(true)
-    expect(out[2].endsWith(';save;;0;100')).toBe(true)
-    expect(out[3].endsWith(';save;;;')).toBe(true)
+    expect(out[1].endsWith(';goal;Aron Keeper;90;30;;;;;;')).toBe(true)
+    expect(out[2].endsWith(';save;;0;100;;;;;;')).toBe(true)
+    expect(out[3].endsWith(';save;;;;;;;;;')).toBe(true)
   })
 })
 
@@ -162,7 +165,7 @@ describe('playerStatsCsv', () => {
     expect(head.slice(12)).toEqual([
       'assist', 'penalty_goal', 'penalty_miss', 'penalty_saved', 'penalty_won',
       'bad_pass', 'technical_foul', 'yellow_card', 'suspension', 'red_card',
-      'blue_card', 'total_goals', 'shot_percentage', 'penalty_saves',
+      'blue_card', 'block', 'off_target', 'total_goals', 'shot_percentage', 'penalty_saves',
       'penalty_goals_conceded', 'penalty_save_percentage', 'total_save_percentage',
     ])
   })
@@ -271,5 +274,32 @@ describe('csvFileName', () => {
     expect(csvFileName(match, teams, 'acties')).toBe(
       'backhand-HV-Test-Gasten-HC-2026-11-08-acties.csv',
     )
+  })
+})
+
+describe('actionsCsv with the live-screen fields', () => {
+  it('writes position code, assist, staff member and rebound', () => {
+    const [save] = actions
+    const staffTeams = teams.map((t, i) =>
+      i === 0 ? { ...t, staff: [{ id: 's1', name: 'Coach Kees', role: 'Eerste trainer' }] } : t,
+    )
+    const out = strip(
+      actionsCsv({
+        match,
+        teams: staffTeams,
+        players,
+        actions: [
+          { ...save, type: 'goal', position: 'LH', assistId: players[0].id, rebound: true },
+          { ...save, id: 'c1', playerId: '', staffId: 's1', type: 'yellow_card', matchClockMs: 99000 },
+        ],
+      }),
+    ).trim().split('\r\n')
+    const cols = out[0].split(';')
+    const row = (i: number) => Object.fromEntries(splitLine(out[i]).map((v, k) => [cols[k], v]))
+    expect(row(1).position_code).toBe('LH')
+    expect(row(1).assist_by).toBe(players[0].name)
+    expect(row(1).rebound).toBe('yes')
+    expect(row(2).staff_member).toBe('Coach Kees')
+    expect(row(2).player).toBe('')
   })
 })

@@ -79,9 +79,18 @@ export function actionsCsv({ match, teams, players, actions }: MatchData): strin
       // trouble in Dutch Excel. Empty when no position was recorded.
       'court_x_pct',
       'court_y_pct',
+      // appended for the tablet live screen
+      'position_code',
+      'assist_by',
+      'fouled',
+      'fouler',
+      'staff_member',
+      'rebound',
     ],
     sorted.map((a) => {
       const p = byId.get(a.playerId)
+      const nameOf = (id: string | undefined) => (id ? (byId.get(id)?.name ?? '') : '')
+      const staff = teams.flatMap((t) => t.staff ?? []).find((s) => s.id === a.staffId)
       return [
         match.date,
         teamName(teams, match.homeTeamId),
@@ -95,6 +104,12 @@ export function actionsCsv({ match, teams, players, actions }: MatchData): strin
         a.goalkeeperId ? (byId.get(a.goalkeeperId)?.name ?? '') : '',
         hasPosition(a) ? Math.round(a.x * 100) : '',
         hasPosition(a) ? Math.round(a.y * 100) : '',
+        a.position ?? '',
+        nameOf(a.assistId),
+        nameOf(a.fouledId),
+        nameOf(a.foulerId),
+        staff ? staff.name : '',
+        a.rebound ? 'yes' : '',
       ]
     }),
   )

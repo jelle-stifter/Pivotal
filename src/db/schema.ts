@@ -43,6 +43,20 @@ export class PivotalDB extends Dexie {
       outbox: 'key, table',
     })
 
+    // Version 3 (SCHEMA_VERSION 2): matches know which side our own team plays on.
+    // The upgrade is a local fix-up, so it must not be queued for upload.
+    this.version(3)
+      .stores({})
+      .upgrade(async (tx) => {
+        remoteTransactions.add(tx)
+        await tx
+          .table('matches')
+          .toCollection()
+          .modify((m: { ownSide?: string }) => {
+            if (m.ownSide === undefined) m.ownSide = 'home'
+          })
+      })
+
     const track = (
       trans: object,
       table: SyncTable,

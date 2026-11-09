@@ -283,6 +283,14 @@ export function buildDemo(date: string, now: number): DemoData {
         y: clamp01(0.5 + gauss(rng) * 0.08),
       })
 
+  // Blocks and shots off target (added for the tablet live screen).
+  for (const [teamId, blocks, off] of [['demo-home', 3, 4], ['demo-away', 2, 5]] as const)
+    for (let i = 0; i < blocks + off; i++)
+      drafts.push({
+        teamId, playerId: anyone(teamId).id, type: i < blocks ? 'block' : 'off_target',
+        ...midCourt(),
+      })
+
   // Spread over 60 minutes in match order; period 1 = first 30 minutes.
   const times = drafts
     .map(() => Math.floor(rng() * 3_600_000))

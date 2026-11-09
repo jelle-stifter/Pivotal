@@ -1,6 +1,7 @@
 import { db as defaultDb, type PivotalDB } from './schema'
 import { buildDemo } from '../lib/demo'
 import { KEEPER_FACED_TYPES } from '../lib/actions'
+import { POSITION_POINT } from '../lib/positions'
 import {
   SCHEMA_VERSION,
   type Action,
@@ -8,6 +9,7 @@ import {
   type Match,
   type MatchFormat,
   type Player,
+  type PositionCode,
   type Side,
   type Team,
 } from '../types'
@@ -121,13 +123,19 @@ export function createRepo(db: PivotalDB = defaultDb) {
       homeTeamId: string
       awayTeamId: string
       date: string
+      time?: string
       location?: string
-      format: MatchFormat
+      /** New matches are always 2 halves. */
+      format?: MatchFormat
+      ownSide?: Side
+      opponentColor?: string
     }): Promise<Match> {
       if (m.homeTeamId === m.awayTeamId)
         throw new Error('Thuis- en uitteam moeten verschillen')
       const match: Match = {
         ...m,
+        format: m.format ?? 2,
+        ownSide: m.ownSide ?? 'home',
         id: uid(),
         currentPeriod: 1,
         clockMs: 0,
@@ -173,12 +181,21 @@ export function createRepo(db: PivotalDB = defaultDb) {
       /** Attack-normalized court position; both or neither. */
       x?: number
       y?: number
+      /** Overrides the keeper on court (goals against: the keeper chosen on screen). */
+      goalkeeperId?: string
+      position?: PositionCode
+      assistId?: string
+      fouledId?: string
+      foulerId?: string
+      staffId?: string
+      rebound?: boolean
+      groupId?: string
     }): Promise<Action> {
       const { clockMs, x, y, ...fields } = input
       const match = await db.matches.get(input.matchId)
       if (!match) throw new Error('Wedstrijd niet gevonden')
-      let goalkeeperId: string | undefined
-      if (KEEPER_FACED_TYPES.includes(input.type)) {
+      let goalkeeperId: string | undefined = input.goalkeeperId
+      if (goalkeeperId === undefined && KEEPER_FACED_TYPES.includes(input.type)) {
         const opposing: Side =
           input.teamId === match.homeTeamId ? 'away' : 'home'
         goalkeeperId = match.activeGoalkeeper[opposing]
@@ -193,10 +210,12 @@ export function createRepo(db: PivotalDB = defaultDb) {
         goalkeeperId,
         schemaVersion: SCHEMA_VERSION,
       }
-      // Only store a position when a complete one was given.
-      if (x !== undefined && y !== undefined) {
-        action.x = x
-        action.y = y
+      // Only store a position when a complete one was given; a position code
+      // gets its representative spot so the heatmaps can use it.
+      const spot = x !== undefined && y !== undefined ? { x, y } : input.position ? POSITION_POINT[input.position] : undefined
+      if (spot) {
+        action.x = spot.x
+        action.y = spot.y
       }
       await db.actions.add(action)
       return action
@@ -247,7 +266,12 @@ export function createRepo(db: PivotalDB = defaultDb) {
     async undoLastAction(matchId: string): Promise<Action | undefined> {
       const all = await db.actions.where('matchId').equals(matchId).toArray()
       const last = all.sort((a, b) => b.createdAt - a.createdAt)[0]
-      if (last) await db.actions.delete(last.id)
+      if (!last) return undefined
+      // Actions logged in one flow (penalty + rebound) are undone together.
+      const ids = last.groupId
+        ? all.filter((a) => a.groupId === last.groupId).map((a) => a.id)
+        : [last.id]
+      await db.actions.bulkDelete(ids)
       return last
     },
   }

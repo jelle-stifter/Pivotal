@@ -27,10 +27,16 @@ export function filterActions(
 
 function totalsBy(actions: Action[], key: 'playerId' | 'teamId') {
   const map = new Map<string, Totals>()
+  const bump = (id: string, type: ActionType) => {
+    const t = map.get(id) ?? emptyTotals()
+    t[type]++
+    map.set(id, t)
+  }
   for (const a of actions) {
-    const t = map.get(a[key]) ?? emptyTotals()
-    t[a.type]++
-    map.set(a[key], t)
+    // Staff members (cards, suspensions) have no player row: team totals only.
+    if (key === 'teamId' || a.playerId) bump(a[key], a.type)
+    // An assist that was filled in on a goal counts as an assist action.
+    if (a.type === 'goal' && a.assistId) bump(key === 'playerId' ? a.assistId : a.teamId, 'assist')
   }
   return map
 }
