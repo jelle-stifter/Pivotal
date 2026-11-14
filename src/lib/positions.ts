@@ -67,3 +67,29 @@ export function goalsPerPosition(
   }
   return [...count].map(([code, goals]) => ({ code, goals })).sort((a, b) => b.goals - a.goals)
 }
+
+const key = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+const ALIASES: Record<string, PositionCode> = { gk: 'K', doelman: 'K' }
+
+export type PositionResult =
+  | { ok: true; position: string; code?: PositionCode }
+  | { ok: false; error: string }
+
+/**
+ * Accepts the abbreviation or the full name, in any case ("rechts hoek", "RH",
+ * "rh" are the same). Returns the full name and the abbreviation to store.
+ * Empty input is allowed (no position).
+ */
+export function normalizePosition(input: string): PositionResult {
+  const k = key(input)
+  if (!k) return { ok: true, position: '' }
+  const found =
+    POSITIONS.find((p) => key(p.code) === k || key(p.label) === k) ??
+    POSITIONS.find((p) => p.code === ALIASES[k])
+  if (!found)
+    return {
+      ok: false,
+      error: `Onbekende positie "${input.trim()}". Kies uit: ${POSITIONS.map((p) => `${p.code} (${p.label})`).join(', ')}.`,
+    }
+  return { ok: true, position: found.label, code: found.code }
+}

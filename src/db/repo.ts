@@ -1,7 +1,7 @@
 import { db as defaultDb, type PivotalDB } from './schema'
 import { buildDemo } from '../lib/demo'
 import { KEEPER_FACED_TYPES } from '../lib/actions'
-import { POSITION_POINT } from '../lib/positions'
+import { POSITION_POINT, normalizePosition } from '../lib/positions'
 import {
   SCHEMA_VERSION,
   type Action,
@@ -29,7 +29,15 @@ export function createRepo(db: PivotalDB = defaultDb) {
       .filter((p) => p.number === number && p.id !== exceptId)
       .count()
     if (clash > 0)
-      throw new Error(`Rugnummer ${number} is al in gebruik in dit team`)
+      throw new Error(`Speler ${number} is al ingevoerd.`)
+  }
+
+  /** Full name + abbreviation of a typed position; throws a clear message when unknown. */
+  function withPosition<T extends { position?: string; positionCode?: PositionCode }>(p: T): T {
+    if (p.position === undefined) return p
+    const r = normalizePosition(p.position)
+    if (!r.ok) throw new Error(r.error)
+    return { ...p, position: r.position, positionCode: r.code }
   }
 
   return {
@@ -114,7 +122,7 @@ export function createRepo(db: PivotalDB = defaultDb) {
     // Players
     async addPlayer(p: Omit<Player, 'id' | 'schemaVersion'>): Promise<Player> {
       await assertFreeNumber(p.teamId, p.number)
-      const player: Player = { ...p, id: uid(), schemaVersion: SCHEMA_VERSION }
+      const player: Player = { ...withPosition(p), id: uid(), schemaVersion: SCHEMA_VERSION }
       await db.players.add(player)
       return player
     },
@@ -126,7 +134,7 @@ export function createRepo(db: PivotalDB = defaultDb) {
         patch.number ?? current.number,
         id,
       )
-      await db.players.update(id, patch)
+      await db.players.update(id, withPosition(patch))
     },
     async deletePlayer(id: string) {
       const used = await db.actions.where('playerId').equals(id).count()

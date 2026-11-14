@@ -15,7 +15,7 @@ async function setup() {
   const h = await repo.addTeam('Thuis')
   const a = await repo.addTeam('Uit')
   const p = (teamId: string, name: string, number: number, gk: boolean) =>
-    repo.addPlayer({ teamId, name, number, position: gk ? 'K' : 'R', isGoalkeeper: gk })
+    repo.addPlayer({ teamId, name, number, position: gk ? 'K' : 'RO', isGoalkeeper: gk })
   const hgk = await p(h.id, 'HK', 1, true)
   const hp = await p(h.id, 'HP', 7, false)
   const agk = await p(a.id, 'AK', 12, true)
@@ -205,7 +205,7 @@ describe('repo', () => {
   it('enforces unique shirt numbers per team', async () => {
     const s = await setup()
     const dup = {
-      teamId: s.h.id, name: 'Dup', number: 7, position: 'R', isGoalkeeper: false,
+      teamId: s.h.id, name: 'Dup', number: 7, position: 'RO', isGoalkeeper: false,
     }
     await expect(repo.addPlayer(dup)).rejects.toThrow()
     // same number in the other team is fine
@@ -240,5 +240,19 @@ describe('repo', () => {
     await repo.deleteMatch(s.m.id)
     expect(await db.actions.count()).toBe(0)
     expect(await db.matches.count()).toBe(0)
+  })
+})
+
+describe('player position', () => {
+  it('stores the full name and the abbreviation, and refuses unknown values', async () => {
+    const t = await repo.addTeam('T')
+    const p = await repo.addPlayer({ teamId: t.id, name: 'A', number: 3, position: 'rh', isGoalkeeper: false })
+    expect(p).toMatchObject({ position: 'Rechts Hoek', positionCode: 'RH' })
+    await repo.updatePlayer(p.id, { position: 'links opbouw' })
+    expect(await db.players.get(p.id)).toMatchObject({ position: 'Links opbouw', positionCode: 'LO' })
+    await expect(repo.updatePlayer(p.id, { position: 'xyz' })).rejects.toThrow('Onbekende positie')
+    await expect(
+      repo.addPlayer({ teamId: t.id, name: 'B', number: 4, position: 'nope', isGoalkeeper: false }),
+    ).rejects.toThrow('Onbekende positie')
   })
 })

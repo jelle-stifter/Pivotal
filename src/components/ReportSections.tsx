@@ -70,7 +70,7 @@ export function ShotsSection({
         </div>
       </div>
       <p className="no-print text-sm text-slate-600">
-        Klik op Bewerk om de baan van de bal, het stuiterpunt en het doelvak vast te leggen. Alleen schoten met een
+        Klik op Bewerk om het baltraject, de stuit en het doelvak vast te leggen. Alleen schoten met een
         tekening of notitie komen op papier.
       </p>
       {shots.length === 0 && <p className="card text-slate-500">Geen schoten.</p>}
@@ -113,8 +113,8 @@ export function KeeperGoalSection({ actions, players }: { actions: Action[]; pla
                   <p className="mt-1 text-center text-xs text-slate-500">Gezien vanuit de schutter</p>
                 </div>
                 <div>
-                  <BounceMap points={g.bounces} label={`Stuiterpunten ${p?.name ?? ''}`} />
-                  <p className="mt-1 text-center text-xs text-slate-500">Waar de bal stuiterde</p>
+                  <BounceMap points={g.bounces} label={`Stuitpunten ${p?.name ?? ''}`} />
+                  <p className="mt-1 text-center text-xs text-slate-500">Waar de bal stuitte</p>
                 </div>
               </div>
               {g.noCell > 0 && (

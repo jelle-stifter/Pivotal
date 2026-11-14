@@ -1,3 +1,4 @@
+import { normalizePosition } from './positions'
 import type { AbsenceReason, Match, Player, StaffMember } from '../types'
 
 export const ABSENCE_LABEL: Record<AbsenceReason, string> = {
@@ -83,4 +84,28 @@ export function updateStaff(
 
 export function removeStaff(staff: StaffMember[] | undefined, id: string): StaffMember[] {
   return (staff ?? []).filter((s) => s.id !== id)
+}
+
+export type OpponentInput =
+  | { ok: true; number: number; position: string }
+  | { ok: false; error: string }
+
+/**
+ * Checks one entry of the opponent list: a clear reason when it is wrong
+ * (not a number, out of range, number already entered, unknown position).
+ */
+export function validateOpponentInput(
+  existingNumbers: number[],
+  numberText: string,
+  positionText = '',
+): OpponentInput {
+  const t = numberText.trim()
+  if (t === '') return { ok: false, error: 'Vul een rugnummer in.' }
+  if (!/^\d+$/.test(t)) return { ok: false, error: 'Rugnummer moet een getal zijn.' }
+  const n = Number(t)
+  if (n > 99) return { ok: false, error: 'Rugnummer moet tussen 0 en 99 liggen.' }
+  if (existingNumbers.includes(n)) return { ok: false, error: `Speler ${n} is al ingevoerd.` }
+  const pos = normalizePosition(positionText)
+  if (!pos.ok) return { ok: false, error: pos.error }
+  return { ok: true, number: n, position: pos.position }
 }

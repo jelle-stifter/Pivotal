@@ -76,3 +76,25 @@ describe('staff', () => {
     expect(addStaff([], '   ', 'Assistent', 'x')).toEqual([])
   })
 })
+
+import { validateOpponentInput } from './prep'
+
+describe('validateOpponentInput', () => {
+  it('accepts a new number and normalizes the position', () => {
+    expect(validateOpponentInput([1, 2], '6', 'lo')).toEqual({ ok: true, number: 6, position: 'Links opbouw' })
+    expect(validateOpponentInput([], '0')).toMatchObject({ ok: true, number: 0, position: '' })
+  })
+  it('gives a reason for every kind of wrong input', () => {
+    const err = (...a: Parameters<typeof validateOpponentInput>) => {
+      const r = validateOpponentInput(...a)
+      return r.ok ? '' : r.error
+    }
+    expect(err([], '')).toBe('Vul een rugnummer in.')
+    expect(err([], 'abc')).toBe('Rugnummer moet een getal zijn.')
+    expect(err([], '-3')).toBe('Rugnummer moet een getal zijn.')
+    expect(err([], '1.5')).toBe('Rugnummer moet een getal zijn.')
+    expect(err([], '100')).toBe('Rugnummer moet tussen 0 en 99 liggen.')
+    expect(err([6], '6')).toBe('Speler 6 is al ingevoerd.')
+    expect(err([], '5', 'xyz')).toContain('Onbekende positie')
+  })
+})

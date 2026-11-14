@@ -10,7 +10,9 @@ import {
   playingPlayers,
   setAbsence,
   setPenaltyTaker,
+  validateOpponentInput,
 } from '../lib/prep'
+import { POSITIONS } from '../lib/positions'
 import type { AbsenceReason, Match } from '../types'
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : 'Er ging iets mis')
@@ -28,6 +30,7 @@ export default function MatchPrep({ match }: { match: Match }) {
   const ownTeam = useLiveQuery(() => db.teams.get(ownId), [ownId])
   const oppTeam = useLiveQuery(() => db.teams.get(oppId), [oppId])
   const [error, setError] = useState('')
+  const [oppError, setOppError] = useState('')
   const [num, setNum] = useState('')
   const [name, setName] = useState('')
   const [pos, setPos] = useState('')
@@ -63,20 +66,23 @@ export default function MatchPrep({ match }: { match: Match }) {
 
   async function addOpponent(e: FormEvent) {
     e.preventDefault()
-    const n = Number(num)
-    if (!Number.isInteger(n) || n < 0) return setError('Vul een rugnummer in.')
-    await run(async () => {
+    const check = validateOpponentInput((opp ?? []).map((p) => p.number), num, pos)
+    if (!check.ok) return setOppError(check.error)
+    setOppError('')
+    try {
       await repo.addPlayer({
         teamId: oppId,
-        name: name.trim() || `Speler ${n}`,
-        number: n,
-        position: pos.trim(),
+        name: name.trim() || `Speler ${check.number}`,
+        number: check.number,
+        position: check.position,
         isGoalkeeper: false,
       })
       setNum('')
       setName('')
       setPos('')
-    })
+    } catch (e) {
+      setOppError(errorMessage(e))
+    }
   }
 
   return (
@@ -106,6 +112,18 @@ export default function MatchPrep({ match }: { match: Match }) {
               >
                 <span className="min-w-8 text-lg font-extrabold tabular-nums">{p.number}</span>
                 <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                <input
+                  className="field w-20"
+                  list="positions"
+                  placeholder="Positie"
+                  defaultValue={p.positionCode ?? p.position}
+                  key={p.positionCode ?? p.position}
+                  aria-label={`Positie van ${p.name}`}
+                  onBlur={(e) => {
+                    if (e.target.value.trim() !== (p.positionCode ?? p.position))
+                      void run(() => repo.updatePlayer(p.id, { position: e.target.value }))
+                  }}
+                />
                 <select
                   className="field w-auto"
                   aria-label={`Status van ${p.name}`}
@@ -123,6 +141,13 @@ export default function MatchPrep({ match }: { match: Match }) {
             ))}
           </div>
         )}
+        <datalist id="positions">
+          {POSITIONS.map((p) => (
+            <option key={p.code} value={p.code}>
+              {p.label}
+            </option>
+          ))}
+        </datalist>
         <p className="mt-2 text-sm text-slate-600">
           {playing.length} van {own?.length ?? 0} spelers spelen.
         </p>
@@ -206,6 +231,11 @@ export default function MatchPrep({ match }: { match: Match }) {
             Toevoegen
           </button>
         </form>
+        {oppError && (
+          <p role="alert" className="alert mt-2">
+            {oppError}
+          </p>
+        )}
       </section>
     </div>
   )

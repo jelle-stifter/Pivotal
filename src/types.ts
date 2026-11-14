@@ -79,7 +79,10 @@ export interface Player {
   teamId: string
   name: string
   number: number
+  /** Full position name (e.g. "Rechts Hoek"); empty = none. */
   position: string
+  /** Abbreviation that belongs to `position` (e.g. "RH"). */
+  positionCode?: PositionCode
   isGoalkeeper: boolean
   schemaVersion: number
 }

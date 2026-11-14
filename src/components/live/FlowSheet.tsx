@@ -11,6 +11,7 @@ import {
 } from '../../lib/flows'
 import { opponentTeamId, ownSide, ownTeamId, shortName } from '../../lib/ownTeam'
 import { POSITIONS } from '../../lib/positions'
+import { validateOpponentInput } from '../../lib/prep'
 import type { Match, Player, Team } from '../../types'
 
 interface Item {
@@ -221,6 +222,12 @@ export default function FlowSheet({
   }
 
   async function addOpponent(n: number) {
+    const check = validateOpponentInput(
+      players.filter((p) => p.teamId === oppId).map((p) => p.number),
+      String(n),
+    )
+    if (!check.ok) return setError(check.error)
+    setError('')
     try {
       const p = await repo.addPlayer({
         teamId: oppId,

@@ -3,11 +3,11 @@ import { parseRoster } from './roster'
 
 describe('parseRoster', () => {
   it('parses semicolon, tab and space separated lines', () => {
-    const r = parseRoster('1;Daan de Vries;Keeper\n7\tJesse Visser\tLinksbuiten\n9 Milan Bos')
+    const r = parseRoster('1;Daan de Vries;Keeper\n7\tJesse Visser\tlinks hoek\n9 Milan Bos')
     expect(r.errors).toEqual([])
     expect(r.entries).toEqual([
       { number: 1, name: 'Daan de Vries', position: 'Keeper', isGoalkeeper: true },
-      { number: 7, name: 'Jesse Visser', position: 'Linksbuiten', isGoalkeeper: false },
+      { number: 7, name: 'Jesse Visser', position: 'Links Hoek', isGoalkeeper: false },
       { number: 9, name: 'Milan Bos', position: '', isGoalkeeper: false },
     ])
   })

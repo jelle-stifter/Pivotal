@@ -1,3 +1,5 @@
+import { normalizePosition } from './positions'
+
 export interface RosterEntry {
   number: number
   name: string
@@ -49,14 +51,17 @@ export function parseRoster(text: string): RosterParse {
       return
     }
     seen.add(number)
-    const position = parts[2] ?? ''
+    const norm = normalizePosition(parts[2] ?? '')
+    if (!norm.ok) {
+      errors.push(`Regel ${i + 1}: ${norm.error}`)
+      return
+    }
     const isGoalkeeper =
-      KEEPER_WORDS.has((parts[3] ?? '').toLowerCase()) ||
-      /^(k|keeper|gk|doelman)$/i.test(position)
+      KEEPER_WORDS.has((parts[3] ?? '').toLowerCase()) || norm.code === 'K'
     entries.push({
       number,
       name,
-      position: /^(k|keeper|gk|doelman)$/i.test(position) ? 'Keeper' : position,
+      position: norm.position,
       isGoalkeeper,
     })
   })

@@ -6,20 +6,21 @@ type P = { x: number; y: number }
 // Attacking half in metres: x 20..40, with a 1 m margin so the goal stays visible.
 const W = 40
 const H = 20
-const VX = 19
+// The half is drawn turned 90 degrees (goal at the top): (x, y) -> (y, -x).
+const VB = '-1 -41 22 22'
 const VW = 22
-const VY = -1
 const VH = 22
+const ROT = 'rotate(-90)'
 
 const area = (r: number) =>
   `M${W} ${8.5 - r}A${r} ${r} 0 0 0 ${W - r} 8.5L${W - r} 11.5A${r} ${r} 0 0 0 ${W} ${11.5 + r}`
 
-export type HalfMode = 'shooter' | 'bounce' | 'draw' | null
+export type HalfMode = 'shooter' | 'bounce' | 'draw' | null // schietpositie, stuit, baltraject
 
 /**
- * The half of the court the team attacks, goal on the right (same normalized
- * frame as the stored positions: x = 1 is the goal line). Shows the shooter,
- * the bounce point and the ball path; can be clicked / drawn on.
+ * The half of the court the team attacks, goal at the top (same normalized
+ * frame as the stored positions: x = 1 is the goal line). Shows the shooting
+ * position, the bounce and the ball path; can be clicked / drawn on.
  */
 export default function HalfCourt({
   shooter,
@@ -47,11 +48,11 @@ export default function HalfCourt({
 
   const toNorm = (e: PointerEvent<SVGSVGElement>): P => {
     const r = svgRef.current!.getBoundingClientRect()
-    const mx = ((e.clientX - r.left) / r.width) * VW + VX
-    const my = ((e.clientY - r.top) / r.height) * VH + VY
+    const sx = ((e.clientX - r.left) / r.width) * VW - 1 // = y in metres
+    const sy = ((e.clientY - r.top) / r.height) * VH - 41 // = -x in metres
     return {
-      x: Math.min(1, Math.max(0.5, mx / W)),
-      y: Math.min(1, Math.max(0, my / H)),
+      x: Math.min(1, Math.max(0.5, -sy / W)),
+      y: Math.min(1, Math.max(0, sx / H)),
     }
   }
   const m = (p: P) => ({ cx: p.x * W, cy: p.y * H })
@@ -84,7 +85,7 @@ export default function HalfCourt({
   return (
     <svg
       ref={svgRef}
-      viewBox={`${VX} ${VY} ${VW} ${VH}`}
+      viewBox={VB}
       role="img"
       aria-label={label}
       style={{
@@ -100,6 +101,7 @@ export default function HalfCourt({
       onPointerUp={up}
       onPointerCancel={up}
     >
+      <g transform={ROT}>
       <g fill="none" stroke="#4b5563" strokeWidth="0.15" pointerEvents="none">
         <rect x="20" y="0" width="20" height="20" />
         <rect x={W} y="8.5" width="0.9" height="3" strokeWidth="0.25" />
@@ -137,6 +139,7 @@ export default function HalfCourt({
       {shooter && (
         <circle {...m(shooter)} r="0.6" fill="#111827" stroke="#fff" strokeWidth="0.15" pointerEvents="none" />
       )}
+      </g>
     </svg>
   )
 }
@@ -145,20 +148,22 @@ export default function HalfCourt({
 export function BounceMap({ points, label }: { points: P[]; label: string }) {
   return (
     <svg
-      viewBox={`${VX} ${VY} ${VW} ${VH}`}
+      viewBox={VB}
       role="img"
       aria-label={label}
       style={{ width: '100%', aspectRatio: `${VW} / ${VH}`, display: 'block', background: '#f3f4f6' }}
     >
-      <g fill="none" stroke="#4b5563" strokeWidth="0.15">
-        <rect x="20" y="0" width="20" height="20" />
-        <rect x={W} y="8.5" width="0.9" height="3" strokeWidth="0.25" />
-        <path d={area(6)} />
-        <path d={area(9)} strokeDasharray="0.6 0.5" />
+      <g transform={ROT}>
+        <g fill="none" stroke="#4b5563" strokeWidth="0.15">
+          <rect x="20" y="0" width="20" height="20" />
+          <rect x={W} y="8.5" width="0.9" height="3" strokeWidth="0.25" />
+          <path d={area(6)} />
+          <path d={area(9)} strokeDasharray="0.6 0.5" />
+        </g>
+        {points.map((p, i) => (
+          <circle key={i} cx={p.x * W} cy={p.y * H} r="0.5" fill="#111827" opacity="0.6" />
+        ))}
       </g>
-      {points.map((p, i) => (
-        <circle key={i} cx={p.x * W} cy={p.y * H} r="0.5" fill="#111827" opacity="0.6" />
-      ))}
     </svg>
   )
 }

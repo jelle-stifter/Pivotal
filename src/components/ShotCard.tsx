@@ -94,27 +94,25 @@ export default function ShotCard({
       <article className={`card ${detail ? '' : 'no-print'}`}>
         {head}
         {detail && (
-          <div className="mt-3 grid items-start gap-4 sm:grid-cols-[1fr_14rem]">
+          <div className="mx-auto mt-3 w-full max-w-[22rem]">
+            <GoalGrid value={action.goalCell} label="Doel, gezien vanuit de schutter" />
             <HalfCourt
               shooter={hasPosition(action) ? { x: action.x, y: action.y } : null}
               bounce={action.bounce}
               goalCell={action.goalCell}
               path={action.path}
-              label="Baan van de bal"
+              label="Baltraject"
             />
-            <div>
-              <GoalGrid value={action.goalCell} label="Doel, gezien vanuit de schutter" />
-              {action.note && <p className="mt-2 whitespace-pre-wrap text-sm">{action.note}</p>}
-            </div>
+            {action.note && <p className="mt-2 whitespace-pre-wrap text-sm">{action.note}</p>}
           </div>
         )}
       </article>
     )
 
   const modes: [HalfMode, string][] = [
-    ['shooter', 'Schutter'],
-    ['bounce', 'Stuiter'],
-    ['draw', 'Eigen lijn'],
+    ['shooter', 'Schietpositie'],
+    ['bounce', 'Stuit'],
+    ['draw', 'Baltraject'],
   ]
   return (
     <article className="card no-print" style={{ borderColor: 'var(--brand)' }}>
@@ -142,21 +140,25 @@ export default function ShotCard({
         </label>
       </div>
 
-      <div className="mt-3 grid items-start gap-4 sm:grid-cols-[1fr_14rem]">
-        <div className="space-y-2">
-          <div className="segmented" role="group" aria-label="Wat teken je">
-            {modes.map(([m, text]) => (
-              <button
-                key={text}
-                type="button"
-                className="seg-btn"
-                aria-pressed={mode === m}
-                onClick={() => setMode(m)}
-              >
-                {text}
-              </button>
-            ))}
+      <div className="mx-auto mt-3 w-full max-w-[22rem] space-y-2">
+        <div className="segmented" role="group" aria-label="Wat teken je">
+          {modes.map(([m, text]) => (
+            <button
+              key={text}
+              type="button"
+              className="seg-btn"
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+        <div>
+          <div className="mb-1 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Doel (vanuit de schutter)
           </div>
+          <GoalGrid value={cell} onPick={setCell} label="Kies het vak waar de bal in het doel ging" />
           <HalfCourt
             shooter={shooter}
             bounce={bounce}
@@ -166,25 +168,19 @@ export default function ShotCard({
             onShooter={setShooter}
             onBounce={setBounce}
             onPath={setPath}
-            label="Halve veld: tik de schutter, de stuiter of teken de baan"
+            label="Halve veld: tik de schietpositie, de stuit of teken het baltraject"
           />
-          <div className="flex flex-wrap gap-2 text-sm">
-            <button className="btn" onClick={() => setShooter(null)} disabled={!shooter}>
-              Wis schutter
-            </button>
-            <button className="btn" onClick={() => setBounce(null)} disabled={!bounce}>
-              Wis stuiter
-            </button>
-            <button className="btn" onClick={() => setPath([])} disabled={path.length === 0}>
-              Wis eigen lijn
-            </button>
-          </div>
         </div>
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Doel (vanuit de schutter)
-          </div>
-          <GoalGrid value={cell} onPick={setCell} label="Kies het vak waar de bal in het doel ging" />
+        <div className="flex flex-wrap gap-2 text-sm">
+          <button className="btn" onClick={() => setShooter(null)} disabled={!shooter}>
+            Wis schietpositie
+          </button>
+          <button className="btn" onClick={() => setBounce(null)} disabled={!bounce}>
+            Wis stuit
+          </button>
+          <button className="btn" onClick={() => setPath([])} disabled={path.length === 0}>
+            Wis baltraject
+          </button>
         </div>
       </div>
 
