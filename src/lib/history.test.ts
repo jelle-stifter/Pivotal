@@ -35,3 +35,10 @@ describe('missingFields: assist', () => {
     expect(missingFields({ todo: ['assist'], playerId: 'p7', assistId: 'p9' })).toEqual([])
   })
 })
+
+describe('missingFields: positie', () => {
+  it('is missing until a position is filled in', () => {
+    expect(missingFields({ todo: ['positie'], playerId: 'p7' })).toEqual(['positie'])
+    expect(missingFields({ todo: ['positie'], playerId: 'p7', position: 'LH' })).toEqual([])
+  })
+})

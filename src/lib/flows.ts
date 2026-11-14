@@ -191,7 +191,7 @@ const REBOUND_TYPE: Record<string, ActionType> = {
 }
 
 const pos = (v: string | undefined): PositionCode | undefined =>
-  v ? (v as PositionCode) : undefined
+  v && v !== TODO_ANSWER ? (v as PositionCode) : undefined
 
 const skipped = (v: string | undefined) => v === TODO_ANSWER
 /** The chosen id, or empty when it was skipped. */
@@ -217,7 +217,7 @@ export function buildActions(spec: FlowSpec, a: Answers, ctx: FlowContext): Acti
               type: 'goal',
               position: pos(a.position),
               assistId: id(a.assist) || undefined,
-              todo: todo([skipped(a.player), 'speler'], [skipped(a.assist), 'assist']),
+              todo: todo([skipped(a.player), 'speler'], [skipped(a.position), 'positie'], [skipped(a.assist), 'assist']),
             },
           ]
         : [
@@ -228,7 +228,7 @@ export function buildActions(spec: FlowSpec, a: Answers, ctx: FlowContext): Acti
               type: 'goal',
               position: pos(a.position),
               goalkeeperId: id(a.keeper) || undefined,
-              todo: todo([skipped(a.player), 'speler'], [skipped(a.keeper), 'keeper']),
+              todo: todo([skipped(a.player), 'speler'], [skipped(a.position), 'positie'], [skipped(a.keeper), 'keeper']),
             },
           ]
     case 'single':
@@ -295,7 +295,11 @@ export function buildActions(spec: FlowSpec, a: Answers, ctx: FlowContext): Acti
           rebound: true,
           position: a.outcome2 === 'goal' ? pos(a.position2) : undefined,
           goalkeeperId: keeper,
-          todo: todo([skipped(a.shooter), 'speler'], [keeperTodo, 'keeper']),
+          todo: todo(
+            [skipped(a.shooter), 'speler'],
+            [a.outcome2 === 'goal' && skipped(a.position2), 'positie'],
+            [keeperTodo, 'keeper'],
+          ),
         })
       }
       return out

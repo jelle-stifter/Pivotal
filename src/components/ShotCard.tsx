@@ -73,13 +73,21 @@ export default function ShotCard({
 
   const head = (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="font-semibold">
-        <span className="tabular-nums text-slate-500">{formatClock(action.matchClockMs)}</span>{' '}
-        {who(action.playerId)} · {ACTION_META[action.type].label}
-        {stand && <span className="font-normal text-slate-600"> · stand {stand}</span>}
-        {action.goalCell !== undefined && (
-          <span className="font-normal text-slate-600"> · {CELL_NAMES[action.goalCell]}</span>
-        )}
+      <div className="flex items-baseline gap-3 font-semibold">
+        <span
+          className="w-16 shrink-0 rounded bg-slate-100 py-0.5 text-center tabular-nums"
+          title="Stand na deze actie"
+          aria-label={`Stand ${stand ?? ''}`}
+        >
+          {stand ?? ''}
+        </span>
+        <span>
+          <span className="tabular-nums text-slate-500">{formatClock(action.matchClockMs)}</span>{' '}
+          {who(action.playerId)} · {ACTION_META[action.type].label}
+          {action.goalCell !== undefined && (
+            <span className="font-normal text-slate-600"> · {CELL_NAMES[action.goalCell]}</span>
+          )}
+        </span>
       </div>
       {!editing && (
         <button

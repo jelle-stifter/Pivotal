@@ -297,6 +297,7 @@ export default function FlowSheet({
         )
       case 'position':
         return (
+          <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {POSITIONS.map((p) => (
               <button
@@ -309,6 +310,14 @@ export default function FlowSheet({
                 <span className="block text-xs font-normal text-white/70">{p.label}</span>
               </button>
             ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => answer(TODO_ANSWER)}
+            className="min-h-[56px] w-full rounded-lg border border-dashed border-amber-300/60 px-4 font-semibold text-amber-200 hover:bg-white/10"
+          >
+            Weet ik niet, invullen na de wedstrijd
+          </button>
           </div>
         )
       case 'choice':

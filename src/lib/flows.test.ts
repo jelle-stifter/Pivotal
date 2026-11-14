@@ -251,3 +251,22 @@ describe('skip the assist', () => {
     ])
   })
 })
+
+describe('skip the position', () => {
+  it('saves a goal without position, marked as todo (own and against)', () => {
+    const own = buildActions({ kind: 'goal', side: 'own' }, { player: 'p7', position: TODO_ANSWER, assist: '' }, ctx)[0]
+    expect(own.position).toBeUndefined()
+    expect(own.todo).toEqual(['positie'])
+    const against = buildActions({ kind: 'goal', side: 'opp' }, { keeper: 'gk1', player: 'o7', position: TODO_ANSWER }, ctx)[0]
+    expect(against.position).toBeUndefined()
+    expect(against.todo).toEqual(['positie'])
+  })
+  it('a rebound goal without position is marked; a rebound miss is not', () => {
+    const spec: FlowSpec = { kind: 'penalty', side: 'own' }
+    const base = { fouled: 'p4', fouler: 'o3', taker: 'p7', outcome: 'stop', after: 'rebound', shooter: 'p9' }
+    const goal = buildActions(spec, { ...base, outcome2: 'goal', position2: TODO_ANSWER }, ctx)[1]
+    expect(goal.todo).toEqual(['positie'])
+    const miss = buildActions(spec, { ...base, outcome2: 'miss' }, ctx)[1]
+    expect(miss.todo).toBeUndefined()
+  })
+})

@@ -42,10 +42,15 @@ export function TodoSection({
         {todo.map((a) => (
           <li key={a.id} className="rounded-lg border border-amber-300 bg-amber-50 p-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <span className="tabular-nums text-slate-500">{formatClock(a.matchClockMs)}</span>{' '}
+              <div className="flex flex-wrap items-baseline gap-3">
+                <span
+                  className="w-16 shrink-0 rounded bg-white/70 py-0.5 text-center font-semibold tabular-nums"
+                  title="Stand na deze actie"
+                >
+                  {standText(scores.get(a.id))}
+                </span>
+                <span className="tabular-nums text-slate-500">{formatClock(a.matchClockMs)}</span>
                 <strong>{ACTION_META[a.type].label}</strong> · {teamName(a.teamId)} · {who(a)}{' '}
-                <span className="tabular-nums text-slate-500">(stand {standText(scores.get(a.id))})</span>{' '}
                 <span className="rounded bg-amber-200 px-1 text-xs font-semibold">
                   Nog invullen: {missingFields(a).map((f) => (f === 'speler' && a.type === 'save' ? 'keeper' : TODO_LABEL[f])).join(', ')}
                 </span>

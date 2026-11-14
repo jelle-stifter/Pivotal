@@ -63,6 +63,16 @@ Groep 5 - aanpassingen na jouw feedback (commits 5c4f2c9, 30c2e9f, cf78a21, 3b22
 - Nieuwe wedstrijd: rij 1 de teams, rij 2 datum, tijdstip en plaats.
 - Live: alle actieknoppen zijn altijd grijs; alleen Geel, Rood en Blauw zijn
   gekleurd. Teamkleuren blijven in de Stand, stipjes, zijpaneel en geschiedenis.
+- Voorbereiding: eigen team als tabel (Nr, Naam, Positie, Status) met de
+  posities als dropdown (zelfde namen als bij een doelpunt); ook bij de
+  tegenstander is de positie nu een dropdown.
+- Live: ook de positie kun je overslaan en later invullen ("Nog invullen:
+  positie"), bij doelpunten en bij een rebound-doelpunt.
+- Live: geschiedenis overzichtelijker: per actie het team (met kleur), wat er
+  gebeurde (Doelpunt, Stop, Miss, ...), wie, positie, klok en stand; de stand
+  is vet bij een doelpunt; de gele regel toont wat nog ingevuld moet worden.
+- Rapport: de stand na elke actie staat nu altijd in een vaste kolom links
+  (zelfde plek, vaste breedte), bij de schotkaarten en bij "Nog invullen".
 
 GECONTROLEERD IN DE APP (browser, 1366x768)
 - Klok liep door tijdens het invoeren van een actie en bij het openen van de

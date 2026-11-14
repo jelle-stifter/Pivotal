@@ -162,7 +162,7 @@ export default function ActionEditor({
               value={position}
               onChange={(e) => setPosition(e.target.value as PositionCode | '')}
             >
-              <option value="">Geen</option>
+              <option value="">{action.todo?.includes('positie') ? 'Nog invullen' : 'Geen'}</option>
               {POSITIONS.map((p) => (
                 <option key={p.code} value={p.code}>
                   {p.code} · {p.label}

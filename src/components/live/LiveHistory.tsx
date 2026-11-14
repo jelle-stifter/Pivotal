@@ -1,25 +1,41 @@
 import { useState } from 'react'
 import ActionEditor from '../ActionEditor'
-import { ACTION_META } from '../../lib/actions'
-import { byTime, missingFields, runningScores } from '../../lib/history'
+import { ACTION_META, SCORING_TYPES } from '../../lib/actions'
+import { byTime, missingFields, runningScores, TODO_LABEL } from '../../lib/history'
 import { formatClock } from '../../lib/time'
-import type { Action, Match, Player } from '../../types'
+import { textOn } from '../../lib/teamColors'
+import type { Action, ActionType, Match, Player } from '../../types'
+
+/** Clear names for the history (the report keeps the short names). */
+const LABEL: Partial<Record<ActionType, string>> = {
+  goal: 'Doelpunt',
+  penalty_goal: '7 meter doelpunt',
+  penalty_miss: '7 meter niet op doel',
+  penalty_saved: '7 meter gestopt',
+  shot: 'Miss',
+  save: 'Stop',
+}
+const labelOf = (t: ActionType) => LABEL[t] ?? ACTION_META[t].label
 
 /**
- * Left column of the live screen: every action of the match, newest first,
- * with the clock and the score at that moment. Tap one to change or delete it.
+ * Left column of the live screen: every action of the match, newest first.
+ * Per action: team, what happened, who, the clock and the score. Tap one to
+ * change or delete it.
  */
 export default function LiveHistory({
   match,
   actions,
   players,
   colorOf,
+  teamLabel,
 }: {
   match: Match
   actions: Action[]
   players: Player[]
   /** Team colour per team id. */
   colorOf: (teamId: string) => string
+  /** Short team name per team id. */
+  teamLabel: (teamId: string) => string
 }) {
   const [editing, setEditing] = useState<Action | null>(null)
   const scores = runningScores(actions, match.homeTeamId, match.awayTeamId)
@@ -35,39 +51,51 @@ export default function LiveHistory({
       {rows.length === 0 ? (
         <p className="px-1 text-sm text-white/50">Nog geen acties</p>
       ) : (
-        <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+        <ul className="min-h-0 flex-1 space-y-1.5 overflow-y-auto">
           {rows.map((a) => {
             const todo = missingFields(a)
             const s = scores.get(a.id)
+            const color = colorOf(a.teamId)
+            const goal = SCORING_TYPES.includes(a.type)
             return (
               <li key={a.id}>
                 <button
                   type="button"
                   onClick={() => setEditing(a)}
-                  className="w-full rounded-md bg-white/5 px-2 py-1.5 text-left text-sm hover:bg-white/10"
+                  className="w-full rounded-md bg-white/5 py-1.5 pl-2.5 pr-2 text-left hover:bg-white/10"
+                  style={{ borderLeft: `4px solid ${color}` }}
                 >
                   <span className="flex items-center gap-2">
                     <span
-                      aria-hidden
-                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: colorOf(a.teamId) }}
-                    />
-                    <span className="tabular-nums text-white/60">{formatClock(a.matchClockMs)}</span>
-                    <span className="min-w-0 flex-1 truncate font-semibold">{ACTION_META[a.type].label}</span>
+                      className="shrink-0 rounded px-1.5 text-xs font-extrabold"
+                      style={{ background: color, color: textOn(color) }}
+                    >
+                      {teamLabel(a.teamId)}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-bold">{labelOf(a.type)}</span>
                     {s && (
-                      <span className="shrink-0 tabular-nums text-white/70">
+                      <span
+                        className={`shrink-0 text-sm tabular-nums ${goal ? 'font-extrabold text-white' : 'text-white/50'}`}
+                      >
                         {s.home}–{s.away}
                       </span>
                     )}
                   </span>
-                  <span className="mt-0.5 block truncate pl-[1.1rem] text-xs text-white/70">
-                    {who(a)}
-                    {todo.length > 0 && (
-                      <span className="ml-1 rounded bg-amber-400/20 px-1 font-semibold text-amber-200">
-                        Nog invullen
-                      </span>
-                    )}
+                  <span className="mt-0.5 flex items-center gap-2 text-xs text-white/70">
+                    <span className="shrink-0 tabular-nums text-white/50">{formatClock(a.matchClockMs)}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {who(a) || (todo.includes('speler') ? '' : '—')}
+                      {a.position ? ` · ${a.position}` : ''}
+                    </span>
                   </span>
+                  {todo.length > 0 && (
+                    <span className="mt-1 block rounded bg-amber-400/20 px-1.5 text-xs font-semibold text-amber-200">
+                      Nog invullen:{' '}
+                      {todo
+                        .map((f) => (f === 'speler' && a.type === 'save' ? 'keeper' : TODO_LABEL[f]))
+                        .join(', ')}
+                    </span>
+                  )}
                 </button>
               </li>
             )

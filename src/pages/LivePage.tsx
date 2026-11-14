@@ -429,13 +429,14 @@ function LiveScreen({
       className="fixed inset-x-0 bottom-0 top-14 z-10 overflow-y-auto text-white"
       style={{ background: '#2a2c30', fontFamily: 'system-ui, sans-serif' }}
     >
-      <div className="mx-auto grid min-h-full max-w-[1440px] gap-3 p-3 lg:h-full lg:grid-cols-[13rem_1fr_17rem_1fr_15rem] lg:grid-rows-[1fr_auto]">
+      <div className="mx-auto grid min-h-full max-w-[1440px] gap-3 p-3 lg:h-full lg:grid-cols-[16rem_1fr_17rem_1fr_15rem] lg:grid-rows-[1fr_auto]">
         {/* Far left: history of the actions */}
         <LiveHistory
           match={match}
           actions={actions}
           players={players}
           colorOf={(id) => (id === match.homeTeamId ? homeColor : awayColor)}
+          teamLabel={(id) => shortName(teamOf(id))}
         />
 
         {/* Left: clock and the buttons of our own team */}

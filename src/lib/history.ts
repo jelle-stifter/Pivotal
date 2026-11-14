@@ -6,6 +6,7 @@ export const TODO_LABEL: Record<TodoField, string> = {
   keeper: 'keeper',
   schutter: 'schutter',
   assist: 'assist',
+  positie: 'positie',
 }
 
 /**
@@ -13,7 +14,7 @@ export const TODO_LABEL: Record<TodoField, string> = {
  * are still empty. Filling them in (live history or report) clears the mark.
  */
 export function missingFields(
-  a: Pick<Action, 'todo' | 'playerId' | 'staffId' | 'goalkeeperId' | 'shooterId' | 'assistId'>,
+  a: Pick<Action, 'todo' | 'playerId' | 'staffId' | 'goalkeeperId' | 'shooterId' | 'assistId' | 'position'>,
 ): TodoField[] {
   return (a.todo ?? []).filter((f) =>
     f === 'speler'
@@ -22,7 +23,9 @@ export function missingFields(
         ? !a.goalkeeperId
         : f === 'assist'
           ? !a.assistId
-          : !a.shooterId,
+          : f === 'positie'
+            ? !a.position
+            : !a.shooterId,
   )
 }
 
