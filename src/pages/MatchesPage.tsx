@@ -202,7 +202,36 @@ export default function MatchesPage() {
           </p>
         ) : (
           <form onSubmit={create} className="space-y-4">
-            {/* Rij 1: de teams. Rij 2: datum, tijdstip en plaats. */}
+            {/* Rij 1: datum, tijdstip en plaats. Rij 2: thuis- en uitteam. */}
+            <div className="grid gap-4 sm:grid-cols-3">
+              <label className="label">
+                Datum
+                <input
+                  className="field"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </label>
+              <label className="label">
+                Tijdstip (optioneel)
+                <input
+                  className="field"
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                />
+              </label>
+              <label className="label">
+                Plaats (optioneel)
+                <input
+                  className="field"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Bijv. Sporthal De Kuil"
+                />
+              </label>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="label">
                 Thuisteam
@@ -233,35 +262,6 @@ export default function MatchesPage() {
                     </option>
                   ))}
                 </select>
-              </label>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="label">
-                Datum
-                <input
-                  className="field"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </label>
-              <label className="label">
-                Tijdstip (optioneel)
-                <input
-                  className="field"
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                />
-              </label>
-              <label className="label">
-                Plaats (optioneel)
-                <input
-                  className="field"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Bijv. Sporthal De Kuil"
-                />
               </label>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
