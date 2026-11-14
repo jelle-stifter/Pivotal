@@ -202,7 +202,8 @@ export default function MatchesPage() {
           </p>
         ) : (
           <form onSubmit={create} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Rij 1: de teams. Rij 2: datum, tijdstip en plaats. */}
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="label">
                 Thuisteam
                 <select
@@ -233,6 +234,8 @@ export default function MatchesPage() {
                   ))}
                 </select>
               </label>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
               <label className="label">
                 Datum
                 <input
