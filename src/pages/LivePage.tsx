@@ -566,24 +566,37 @@ function LiveScreen({
           />
         </div>
 
-        {/* Bottom: cards and 2 minutes, and ending the match */}
-        <div
-          className={`grid grid-cols-4 gap-2 lg:col-span-3 ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}
-        >
-          <PadButton color="#eab308" textColor="#111" onClick={() => start({ kind: 'card', type: 'yellow_card' })}>
+        {/* Bottom: one row from the history to the stats panel: cards, 2 minutes, ending the match */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5 lg:col-span-5">
+          <PadButton
+            color="#eab308"
+            textColor="#111"
+            className={buttonsLocked ? 'pointer-events-none opacity-60' : ''}
+            onClick={() => start({ kind: 'card', type: 'yellow_card' })}
+          >
             Geel
           </PadButton>
-          <PadButton color="#52525b" onClick={() => start({ kind: 'card', type: 'suspension' })}>
+          <PadButton
+            color="#52525b"
+            className={buttonsLocked ? 'pointer-events-none opacity-60' : ''}
+            onClick={() => start({ kind: 'card', type: 'suspension' })}
+          >
             2 Min
           </PadButton>
-          <PadButton color="#dc2626" onClick={() => start({ kind: 'card', type: 'red_card' })}>
+          <PadButton
+            color="#dc2626"
+            className={buttonsLocked ? 'pointer-events-none opacity-60' : ''}
+            onClick={() => start({ kind: 'card', type: 'red_card' })}
+          >
             Rood
           </PadButton>
-          <PadButton color="#2563eb" onClick={() => start({ kind: 'card', type: 'blue_card' })}>
+          <PadButton
+            color="#2563eb"
+            className={buttonsLocked ? 'pointer-events-none opacity-60' : ''}
+            onClick={() => start({ kind: 'card', type: 'blue_card' })}
+          >
             Blauw
           </PadButton>
-        </div>
-        <div className="flex">
           <button
             type="button"
             onClick={() => void finishMatch()}
