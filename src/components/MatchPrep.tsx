@@ -12,8 +12,40 @@ import {
   setPenaltyTaker,
   validateOpponentInput,
 } from '../lib/prep'
-import { POSITIONS } from '../lib/positions'
+import { POSITIONS, normalizePosition } from '../lib/positions'
 import type { AbsenceReason, Match } from '../types'
+
+/** Code of a player's position; older free-text positions are recognised when they match. */
+const known = (p: { positionCode?: string; position: string }) => {
+  if (p.positionCode) return p.positionCode
+  const r = normalizePosition(p.position)
+  return r.ok ? (r.code ?? '') : ''
+}
+
+/** Dropdown with the names of the positions (the same ones as for a goal). */
+function PositionSelect({
+  value,
+  onChange,
+  label,
+  legacy = '',
+}: {
+  value: string
+  onChange: (code: string) => void
+  label: string
+  /** Older free-text position that has no code yet. */
+  legacy?: string
+}) {
+  return (
+    <select className="field w-full" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{legacy ? `${legacy} (kies een positie)` : 'Geen positie'}</option>
+      {POSITIONS.map((p) => (
+        <option key={p.code} value={p.code}>
+          {p.label} ({p.code})
+        </option>
+      ))}
+    </select>
+  )
+}
 
 const errorMessage = (e: unknown) => (e instanceof Error ? e.message : 'Er ging iets mis')
 
@@ -104,50 +136,50 @@ export default function MatchPrep({ match }: { match: Match }) {
             .
           </p>
         ) : (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {own?.map((p) => (
-              <label
-                key={p.id}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1"
-              >
-                <span className="min-w-8 text-lg font-extrabold tabular-nums">{p.number}</span>
-                <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                <input
-                  className="field w-20"
-                  list="positions"
-                  placeholder="Positie"
-                  defaultValue={p.positionCode ?? p.position}
-                  key={p.positionCode ?? p.position}
-                  aria-label={`Positie van ${p.name}`}
-                  onBlur={(e) => {
-                    if (e.target.value.trim() !== (p.positionCode ?? p.position))
-                      void run(() => repo.updatePlayer(p.id, { position: e.target.value }))
-                  }}
-                />
-                <select
-                  className="field w-auto"
-                  aria-label={`Status van ${p.name}`}
-                  value={match.absent?.[p.id] ?? ''}
-                  onChange={(e) => changeAbsence(p.id, e.target.value)}
-                >
-                  <option value="">Speelt</option>
-                  {ABSENCE_REASONS.map((r) => (
-                    <option key={r} value={r}>
-                      {ABSENCE_LABEL[r]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th className="w-16">Nr</th>
+                  <th>Naam</th>
+                  <th>Positie</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {own?.map((p) => (
+                  <tr key={p.id}>
+                    <td className="text-lg font-extrabold tabular-nums">{p.number}</td>
+                    <td className="font-semibold">{p.name}</td>
+                    <td>
+                      <PositionSelect
+                        value={known(p)}
+                        legacy={known(p) ? '' : p.position}
+                        label={`Positie van ${p.name}`}
+                        onChange={(v) => void run(() => repo.updatePlayer(p.id, { position: v }))}
+                      />
+                    </td>
+                    <td>
+                      <select
+                        className="field w-full"
+                        aria-label={`Status van ${p.name}`}
+                        value={match.absent?.[p.id] ?? ''}
+                        onChange={(e) => changeAbsence(p.id, e.target.value)}
+                      >
+                        <option value="">Speelt</option>
+                        {ABSENCE_REASONS.map((r) => (
+                          <option key={r} value={r}>
+                            {ABSENCE_LABEL[r]}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-        <datalist id="positions">
-          {POSITIONS.map((p) => (
-            <option key={p.code} value={p.code}>
-              {p.label}
-            </option>
-          ))}
-        </datalist>
         <p className="mt-2 text-sm text-slate-600">
           {playing.length} van {own?.length ?? 0} spelers spelen.
         </p>
@@ -223,9 +255,9 @@ export default function MatchPrep({ match }: { match: Match }) {
             Naam (optioneel)
             <input className="field" value={name} onChange={(e) => setName(e.target.value)} />
           </label>
-          <label className="label w-40">
+          <label className="label w-56">
             Positie (optioneel)
-            <input className="field" value={pos} onChange={(e) => setPos(e.target.value)} />
+            <PositionSelect value={pos} label="Positie tegenstander" onChange={setPos} />
           </label>
           <button type="submit" className="btn btn-primary">
             Toevoegen
