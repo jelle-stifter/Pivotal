@@ -72,16 +72,18 @@ function ItemGrid({
       key={i.value}
       type="button"
       onClick={() => onPick(i.value)}
-      className={`flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 text-left font-semibold hover:bg-white/20 active:bg-white/30 ${
-        big ? 'min-h-[72px] text-lg' : 'min-h-[56px]'
+      className={`flex items-center gap-3 rounded-xl border border-white/15 bg-white/10 px-4 text-left font-semibold hover:bg-white/20 active:bg-white/30 ${
+        big ? 'min-h-[96px] text-2xl' : 'min-h-[80px] text-xl'
       }`}
     >
       {i.number !== undefined && (
-        <span className="min-w-8 text-xl font-extrabold tabular-nums">{i.number}</span>
+        <span className={`min-w-12 font-extrabold tabular-nums ${big ? 'text-5xl' : 'text-4xl'}`}>
+          {i.number}
+        </span>
       )}
       <span className="min-w-0">
         <span className="block truncate">{i.name}</span>
-        {i.sub && <span className="block truncate text-xs font-normal text-white/60">{i.sub}</span>}
+        {i.sub && <span className="block truncate text-sm font-normal text-white/60">{i.sub}</span>}
       </span>
     </button>
   )
@@ -109,13 +111,13 @@ function ItemGrid({
           <div className="grid grid-cols-3 gap-2">{first.map((i) => btn(i, true))}</div>
         </div>
       )}
-      <div className="grid max-h-[46vh] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 md:grid-cols-4">
+      <div className="grid max-h-[52vh] grid-cols-2 gap-3 overflow-y-auto md:grid-cols-3">
         {rest.map((i) => btn(i))}
         {canAdd && (
           <button
             type="button"
             onClick={() => onAddNumber?.(Number(text))}
-            className="min-h-[56px] rounded-lg border border-dashed border-white/40 px-3 font-semibold hover:bg-white/10"
+            className="min-h-[80px] rounded-xl border border-dashed border-white/40 px-3 text-xl font-semibold hover:bg-white/10"
           >
             + Nummer {text} toevoegen
           </button>

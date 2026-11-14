@@ -131,9 +131,9 @@ describe('own team helpers', () => {
     expect(shortName({ name: 'Eindhoven 1' })).toBe('EIN')
     expect(shortName(undefined)).toBe('?')
   })
-  it('opponent colour: orange by default, own choice with a lighter accent', () => {
-    expect(opponentColors(undefined).main).toBe('#e2711d')
-    expect(opponentColors('nonsense').accent).toBe('#fdba74')
+  it('opponent colour: grey by default, own choice with a lighter accent', () => {
+    expect(opponentColors(undefined).main).toBe('#4b5563')
+    expect(opponentColors('nonsense').accent).toBe('#9ca3af')
     const c = opponentColors('#2563eb')
     expect(c.main).toBe('#2563eb')
     expect(c.accent).toMatch(/^#[0-9a-f]{6}$/)

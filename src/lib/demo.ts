@@ -138,7 +138,7 @@ function daysBefore(date: string, n: number): string {
 export function buildDemo(date: string, now: number): DemoData {
   let rng: Rng = mulberry32(MATCHES[0].seed)
   const teams: Team[] = [
-    { id: 'demo-home', name: 'HV Backhand (demo)', schemaVersion: SCHEMA_VERSION },
+    { id: 'demo-home', name: 'H.V. Margraten DS1', shortName: 'HVM', schemaVersion: SCHEMA_VERSION },
     { id: 'demo-away', name: 'Gasten HC (demo)', schemaVersion: SCHEMA_VERSION },
   ]
   const role = new Map<string, Role>()
@@ -331,6 +331,7 @@ export function buildDemo(date: string, now: number): DemoData {
     date: daysBefore(date, cfg.daysBefore),
     location: cfg.home === 'demo-home' ? 'Sporthal De Kuil' : 'Sporthal Het Anker',
     format: 2 as const,
+    ownSide: cfg.home === 'demo-home' ? ('home' as const) : ('away' as const),
     currentPeriod: 2,
     clockMs: 3_600_000,
     activeGoalkeeper: {

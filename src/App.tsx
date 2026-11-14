@@ -102,7 +102,7 @@ export default function App() {
                           ? 'text-red-400'
                           : sync.state === 'offline'
                             ? 'text-amber-300'
-                            : 'text-sky-300'
+                            : 'text-gray-300'
                       }`}
                       role="status"
                       aria-label={

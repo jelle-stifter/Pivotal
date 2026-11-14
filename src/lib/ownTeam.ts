@@ -22,9 +22,9 @@ export function shortName(team: Pick<Team, 'name' | 'shortName'> | undefined): s
   return s ? s : team.name.replace(/\s+/g, '').slice(0, 3).toUpperCase()
 }
 
-export const OWN_COLOR = { main: '#0f766e', accent: '#5eead4' }
-/** Default colour of the opponent: orange. */
-export const OPPONENT_COLOR = { main: '#e2711d', accent: '#fdba74' }
+export const OWN_COLOR = { main: '#6b7280', accent: '#e5e7eb' }
+/** Colour of the opponent: a darker grey than our own team. */
+export const OPPONENT_COLOR = { main: '#4b5563', accent: '#9ca3af' }
 
 /** Lighter accent for an opponent colour chosen in the match form. */
 export function opponentColors(hex: string | undefined): { main: string; accent: string } {

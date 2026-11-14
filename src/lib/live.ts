@@ -45,3 +45,11 @@ export function topScorerRows(actions: Action[], teamId: string, limit = 6): Sco
     .sort((a, b) => b.goals - a.goals || b.pct - a.pct || a.playerId.localeCompare(b.playerId))
     .slice(0, limit)
 }
+
+/** A match has started once the clock has run or an action is logged; the preparation is then closed. */
+export function matchStarted(
+  match: { clockMs: number; clockStartedAt?: number; finishedAt?: number },
+  actionCount: number,
+): boolean {
+  return actionCount > 0 || match.clockMs > 0 || match.clockStartedAt !== undefined || Boolean(match.finishedAt)
+}

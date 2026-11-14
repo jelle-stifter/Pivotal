@@ -7,11 +7,11 @@ import { DEMO_MATCH_ID } from '../lib/demo'
 import { score } from '../lib/stats'
 import { liveMatchIds } from '../lib/analysis'
 import LiveLink from '../components/LiveLink'
+import { matchStarted } from '../lib/live'
 import ScorerPicker from '../components/ScorerPicker'
 import { useMemberships } from '../hooks/useAccess'
 import { isViewerOnly } from '../lib/access'
 import MatchPrep from '../components/MatchPrep'
-import { OPPONENT_COLOR } from '../lib/ownTeam'
 import type { Side } from '../types'
 
 function today() {
@@ -44,7 +44,6 @@ export default function MatchesPage() {
   const [location, setLocation] = useState('')
   const [time, setTime] = useState('')
   const [ownSide, setOwnSide] = useState<Side>('home')
-  const [opponentColor, setOpponentColor] = useState(OPPONENT_COLOR.main)
   const [prepId, setPrepId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -63,7 +62,6 @@ export default function MatchesPage() {
         time: time || undefined,
         location: location.trim() || undefined,
         ownSide,
-        opponentColor,
       })
       setHomeId('')
       setAwayId('')
@@ -237,15 +235,6 @@ export default function MatchesPage() {
                   </label>
                 </div>
               </fieldset>
-              <label className="label">
-                Kleur tegenstander
-                <input
-                  className="field w-24 p-1"
-                  type="color"
-                  value={opponentColor}
-                  onChange={(e) => setOpponentColor(e.target.value)}
-                />
-              </label>
               <button className="btn btn-primary" type="submit">
                 Wedstrijd aanmaken
               </button>
@@ -323,7 +312,14 @@ export default function MatchesPage() {
                         >
                           Statistieken
                         </a>
-                        {!viewerOnly && (
+                        <a
+                          href={`#/sheet/${m.id}`}
+                          className="btn mr-2 inline-flex items-center no-underline"
+                          aria-label={`Rapport ${label}`}
+                        >
+                          Rapport
+                        </a>
+                        {!viewerOnly && !matchStarted(m, (actions ?? []).filter((x) => x.matchId === m.id).length) && (
                           <button
                             className="btn mr-2"
                             aria-expanded={prepId === m.id}

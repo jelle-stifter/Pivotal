@@ -21,6 +21,8 @@ export default function LiveLink({
   const match = useLiveQuery(() => db.matches.get(matchId), [matchId])
   const access = useMatchAccess(match)
   if (access !== 'score') return null
+  // A finished match is no longer scored live: only statistics and report remain.
+  if (match?.finishedAt) return null
   return (
     <a href={`#/match/${matchId}`} className={className} aria-label={label}>
       {children}

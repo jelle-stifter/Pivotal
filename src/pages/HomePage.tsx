@@ -12,6 +12,7 @@ import { scoreByPeriod, score } from '../lib/stats'
 import LiveLink from '../components/LiveLink'
 import { useMemberships } from '../hooks/useAccess'
 import { matchAccess } from '../lib/access'
+import { ownTeamId } from '../lib/ownTeam'
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
@@ -58,7 +59,12 @@ export default function HomePage() {
     matches.filter((m) => seasonOf(m.date) === season).map((m) => m.id),
   )
   const seasonActions = actions.filter((a) => seasonMatchIds.has(a.matchId))
-  const scorers = topScorers(seasonActions, 5)
+  // Top scorers of our own team only.
+  const ownTeamOfMatch = new Map(matches.map((m) => [m.id, ownTeamId(m)]))
+  const scorers = topScorers(
+    seasonActions.filter((a) => a.teamId === ownTeamOfMatch.get(a.matchId)),
+    5,
+  )
   const maxGoals = scorers[0]?.total ?? 1
   // Our own team against the opponents (e.g. 5 against 3), not both teams added up.
   const versus = ownVersusOpponent(

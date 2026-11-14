@@ -79,7 +79,7 @@ export default function Court({
         </clipPath>
       </defs>
 
-      <rect x="0" y="0" width={W} height={H} fill="#e0f2fe" />
+      <rect x="0" y="0" width={W} height={H} fill="#f3f4f6" />
 
       {heat && (
         <g clipPath="url(#court-clip)" pointerEvents="none">
@@ -103,7 +103,7 @@ export default function Court({
 
       <g
         fill="none"
-        stroke="#1e3a8a"
+        stroke="#4b5563"
         strokeWidth="0.15"
         pointerEvents="none"
       >

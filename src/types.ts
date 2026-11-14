@@ -98,6 +98,8 @@ export interface Match {
   ownSide?: Side
   /** Colour of the opponent on the live screen (hex). */
   opponentColor?: string
+  /** Post-match report: free notes about the match. */
+  reportNote?: string
   /** Own players that do not play, with the reason. Others are playing. */
   absent?: Record<string, AbsenceReason>
   /** The coach's own top 3 penalty takers (player ids, best first). */
@@ -157,6 +159,14 @@ export interface Action {
   foulerId?: string
   /** Set for staff members (cards / suspensions); playerId is then ''. */
   staffId?: string
+  /** Post-match report: where the ball first touched the floor (same frame as x, y). */
+  bounce?: { x: number; y: number }
+  /** Post-match report: goal cell 0..8, row by row from the top-left, seen from the shooter. */
+  goalCell?: number
+  /** Post-match report: a hand-drawn line of the ball (same frame as x, y). */
+  path?: { x: number; y: number }[]
+  /** Post-match report: free note on this action. */
+  note?: string
   /** True for the shot after a stopped penalty (rebound). */
   rebound?: boolean
   /** Actions that were logged in one flow share this id (undo removes all). */

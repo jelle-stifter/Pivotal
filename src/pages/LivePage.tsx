@@ -18,10 +18,10 @@ import {
   HALF_MS,
 } from '../lib/clock'
 import type { FlowSpec } from '../lib/flows'
-import { topScorerRows } from '../lib/live'
+import { matchStarted, topScorerRows } from '../lib/live'
 import {
   OWN_COLOR,
-  opponentColors,
+  OPPONENT_COLOR,
   opponentTeamId,
   ownSide,
   ownTeamId,
@@ -34,7 +34,7 @@ import FlowSheet from '../components/live/FlowSheet'
 import MatchPrep from '../components/MatchPrep'
 import { PenaltyList, ScorersPanel } from '../components/live/LivePanels'
 import StatsPage from './StatsPage'
-import type { Action, ActionType, Match, Player, Team } from '../types'
+import type { Action, ActionType, Match, Player, Side, Team } from '../types'
 
 export default function LivePage({ matchId }: { matchId: string }) {
   const matches = useLiveQuery(
@@ -231,10 +231,15 @@ function LiveScreen({
   const oppId = opponentTeamId(match)
   const teamOf = (id: string) => teams.find((t) => t.id === id)
   const own = ownSide(match) // the side of our own team (HVM)
-  const colors = { own: OWN_COLOR, opp: opponentColors(match.opponentColor) }
+  const colors = { own: OWN_COLOR, opp: OPPONENT_COLOR }
   const homeColor = (own === 'home' ? colors.own : colors.opp).main
   const awayColor = (own === 'away' ? colors.own : colors.opp).main
   const result = score(actions, match.homeTeamId, match.awayTeamId)
+  // Our own team is always on the left, the opponent on the right.
+  const leftSide: Side = own
+  const rightSide: Side = own === 'home' ? 'away' : 'home'
+  const sideColor = (s: Side) => (s === 'home' ? homeColor : awayColor)
+  const sideTeamId = (s: Side) => (s === 'home' ? match.homeTeamId : match.awayTeamId)
 
   // If a team has exactly one keeper and none is set yet, set it (sequentially
   // to avoid read-modify-write races on the shared activeGoalkeeper object).
@@ -366,9 +371,9 @@ function LiveScreen({
   }
 
   const penalties = activePenalties(actions, gameMs)
-  const sideHeader = (side: 'home' | 'away') => {
-    const t = teamOf(side === 'home' ? match.homeTeamId : match.awayTeamId)
-    const color = side === 'home' ? homeColor : awayColor
+  const sideHeader = (side: Side) => {
+    const t = teamOf(sideTeamId(side))
+    const color = sideColor(side)
     return (
       <div className="flex items-center gap-2 text-sm font-bold">
         <span aria-hidden className="inline-block h-3 w-3 rounded-full" style={{ background: color }} />
@@ -379,7 +384,6 @@ function LiveScreen({
     )
   }
 
-  const homeIsOwn = own === 'home'
   const buttonsLocked = finished
 
   return (
@@ -388,7 +392,7 @@ function LiveScreen({
       style={{ background: '#2a2c30', fontFamily: 'system-ui, sans-serif' }}
     >
       <div className="mx-auto grid min-h-full max-w-[1440px] gap-3 p-3 lg:h-full lg:grid-cols-[1fr_17rem_1fr_16rem] lg:grid-rows-[1fr_auto]">
-        {/* Left: clock and the buttons of the home side */}
+        {/* Left: clock and the buttons of our own team */}
         <div className="flex min-h-0 flex-col gap-3">
           <div className="flex items-stretch gap-3">
             <button
@@ -409,9 +413,9 @@ function LiveScreen({
               {formatClock(countdownMs(clock.ms, period))}
             </div>
           </div>
-          {sideHeader('home')}
+          {sideHeader(leftSide)}
           <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
-            {sideButtons(homeIsOwn, homeColor)}
+            {sideButtons(true, sideColor(leftSide))}
           </div>
         </div>
 
@@ -420,15 +424,15 @@ function LiveScreen({
           <section className="rounded-2xl bg-black/30 p-3 text-center" aria-label="Stand">
             <h2 className="text-xs font-bold uppercase tracking-widest text-white/60">Stand</h2>
             <div className="mt-1 flex items-center justify-center gap-2 text-4xl font-extrabold tabular-nums">
-              <span style={{ color: homeColor }}>{shortName(teamOf(match.homeTeamId))}</span>
-              <span>{result.home}</span>
+              <span style={{ color: sideColor(leftSide) }}>{shortName(teamOf(sideTeamId(leftSide)))}</span>
+              <span>{result[leftSide]}</span>
               <span className="text-white/40">|</span>
-              <span>{result.away}</span>
-              <span style={{ color: awayColor }}>{shortName(teamOf(match.awayTeamId))}</span>
+              <span>{result[rightSide]}</span>
+              <span style={{ color: sideColor(rightSide) }}>{shortName(teamOf(sideTeamId(rightSide)))}</span>
             </div>
             <div className="mt-1 flex justify-between text-xs text-white/60">
-              <span>Thuis</span>
-              <span>Uit</span>
+              <span>{leftSide === 'home' ? 'Thuis' : 'Uit'}</span>
+              <span>{rightSide === 'home' ? 'Thuis' : 'Uit'}</span>
             </div>
             {finished && (
               <div className="mt-2 flex items-center justify-center gap-2">
@@ -473,19 +477,21 @@ function LiveScreen({
             colors={{ own: colors.own.main, opp: colors.opp.main }}
             ownTeamId={ownId}
           />
-          <button
-            type="button"
-            onClick={() => setShowPrep(true)}
-            className="min-h-11 rounded-xl border border-white/25 px-3 text-sm font-semibold hover:bg-white/10"
-          >
-            Voorbereiding
-          </button>
+          {!matchStarted(match, actions.length) && (
+            <button
+              type="button"
+              onClick={() => setShowPrep(true)}
+              className="min-h-11 rounded-xl border border-white/25 px-3 text-sm font-semibold hover:bg-white/10"
+            >
+              Voorbereiding
+            </button>
+          )}
         </div>
 
-        {/* Right: the away side, with undo next to its team name */}
+        {/* Right: the opponent, with undo next to its team name */}
         <div className="flex min-h-0 flex-col gap-3">
           <div className="flex min-h-[88px] items-center justify-between gap-2 rounded-2xl bg-black/25 px-3">
-            {sideHeader('away')}
+            {sideHeader(rightSide)}
             <button
               type="button"
               onClick={() => void undo()}
@@ -496,7 +502,7 @@ function LiveScreen({
           </div>
           <div className="h-5" aria-hidden />
           <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
-            {sideButtons(!homeIsOwn, awayColor)}
+            {sideButtons(false, sideColor(rightSide))}
           </div>
         </div>
 
@@ -545,7 +551,7 @@ function LiveScreen({
         className={`pointer-events-none fixed bottom-20 left-1/2 z-40 -translate-x-1/2 rounded-full px-4 py-2 text-sm font-semibold shadow-lg ${
           toast ? '' : 'hidden'
         }`}
-        style={{ background: toast?.error ? '#7f1d1d' : '#0f766e', color: '#fff' }}
+        style={{ background: toast?.error ? '#7f1d1d' : '#374151', color: '#fff' }}
       >
         {toast?.text}
       </div>

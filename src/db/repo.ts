@@ -236,6 +236,10 @@ export function createRepo(db: PivotalDB = defaultDb) {
           | 'goalkeeperId'
           | 'x'
           | 'y'
+          | 'bounce'
+          | 'goalCell'
+          | 'path'
+          | 'note'
         >
       >,
     ) {

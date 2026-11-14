@@ -11,6 +11,7 @@ import {
   visibleTypes,
 } from '../lib/stats'
 import { periodLabel } from '../lib/periods'
+import { KeeperGoalSection, MatchNotes, ShotsSection } from '../components/ReportSections'
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
@@ -96,7 +97,7 @@ export default function SheetPage({ matchId }: { matchId: string }) {
 
       <header className="card text-center">
         <div className="text-sm font-semibold uppercase tracking-widest text-slate-500">
-          Wedstrijdstatistieken
+          Wedstrijdrapport
         </div>
         <h2 className="mt-1 text-2xl font-black">
           {teamName(match.homeTeamId)} – {teamName(match.awayTeamId)}
@@ -164,6 +165,17 @@ export default function SheetPage({ matchId }: { matchId: string }) {
           </p>
         )}
       </section>
+
+      <KeeperGoalSection actions={actions} players={players} />
+
+      <MatchNotes match={match} />
+
+      <ShotsSection
+        actions={actions}
+        players={players}
+        teamName={teamName}
+        teamIds={[match.homeTeamId, match.awayTeamId]}
+      />
 
       <p className="text-center text-xs text-slate-400">
         Schot% = (goals + 7m-goals) / (goals + missers + 7m-goals + 7m gestopt +

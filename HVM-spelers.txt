@@ -1,0 +1,40 @@
+HVM: SPELERSLIJST OM TE IMPORTEREN
+==================================
+
+Teamnaam:   HVM
+Korte naam: HVM
+
+Hoe gebruik je dit?
+1. Open http://localhost:5173/#/teams
+2. Maak het team: typ "HVM" bij "Nieuw team" en klik op Toevoegen.
+3. Vul bij "Korte naam" HVM in.
+4. Klik op "Spelerslijst plakken (bijv. uit Excel)".
+5. Vervang hieronder de voorbeeldregels door je eigen spelers en plak
+   alleen de regels van het kader in het tekstvak.
+6. Klik op "... spelers importeren".
+
+Elke regel is: nummer;naam;positie;K
+- De positie en de K mogen leeg blijven.
+- Zet een K aan het eind bij keepers. Dat is nodig, anders kun je bij een
+  goal tegen geen keeper kiezen.
+- Rugnummers moeten uniek zijn binnen het team.
+- Je kunt ook rechtstreeks uit Excel plakken (kolommen nummer, naam, positie).
+
+---- PLAK VANAF HIER ----
+1;Naam Keeper 1;Keeper;K
+16;Naam Keeper 2;Keeper;K
+2;Naam Speler;Linksbuiten
+3;Naam Speler;Linksachter
+4;Naam Speler;Midden
+5;Naam Speler;Rechtsachter
+6;Naam Speler;Rechtsbuiten
+7;Naam Speler;Cirkelloper
+---- PLAK TOT HIER ----
+
+Daarna:
+- Teams > HVM > Staf en trainers: voeg je trainers toe (eerste trainer,
+  tweede trainer, assistent, ...). Zij kunnen een kaart of 2 minuten krijgen.
+- Wedstrijden > Nieuwe wedstrijd: kies HVM en de tegenstander, en stel in of
+  HVM thuis of uit speelt.
+- De tegenstander hoeft nog geen spelers te hebben: nummers voeg je tijdens
+  de wedstrijd toe.
