@@ -49,6 +49,21 @@ Groep 4 - kleuren (commit 2b9cecc)
   scorekop, vergelijkingsbalken en scoreverloop. Tekst op de kleur is
   automatisch zwart of wit (minimaal 4,5:1, getest voor het hele palet).
 
+Groep 5 - aanpassingen na jouw feedback (commits 5c4f2c9, 30c2e9f, cf78a21, 3b22b77)
+- Rapport: halve veld links, doelmatrix rechts (veld begrensd tot 26 rem).
+- Assist kun je nu ook overslaan en later invullen ("Nog invullen: assist"),
+  in het rapport en in de geschiedenis. "Geen assist" kiezen haalt de
+  markering weg.
+- Onderschepping past nu in zijn blokje (Pass fout en Technische fout naast
+  elkaar, Onderschepping eronder over de volle breedte).
+- Start-knop vult de hele linkerkolom; de timer staat rechts van de Stand;
+  beide teamnamen met Timeout staan op dezelfde hoogte.
+- Onderste rij (Geel, 2 Min, Rood, Blauw, Wedstrijd beeindigen) loopt over de
+  volle breedte, van de geschiedenis tot het stats-paneel.
+- Nieuwe wedstrijd: rij 1 de teams, rij 2 datum, tijdstip en plaats.
+- Live: alle actieknoppen zijn altijd grijs; alleen Geel, Rood en Blauw zijn
+  gekleurd. Teamkleuren blijven in de Stand, stipjes, zijpaneel en geschiedenis.
+
 GECONTROLEERD IN DE APP (browser, 1366x768)
 - Klok liep door tijdens het invoeren van een actie en bij het openen van de
   Stop-dialoog; stopte alleen bij Timeout.
@@ -59,14 +74,12 @@ GECONTROLEERD IN DE APP (browser, 1366x768)
 
 WAT NU NOG AAN TE PASSEN / OPEN PUNTEN
 - Statistiekenpagina: samen met jou aanpassen (zoals afgesproken).
-- Doelmatrix: staat boven en in het midden van het doel, maar is breder dan
-  het kleine doel op het veld (3 m van 22 m). Precies even breed maken zou de
-  matrix te klein maken om aan te tikken. Zeg het als je dat anders wilt.
+- Doelmatrix: staat rechts naast het veld, bovenaan uitgelijnd met het doel,
+  maar is breder dan het kleine doel op het veld (3 m van 22 m). Precies even
+  breed maken zou de matrix te klein maken om aan te tikken.
 - Klokbug: oorzaak niet bewezen; kijk bij het volgende gebruik of de klok nog
   ooit stopt.
 - Overzichtspagina (HomePage): de scorekop daar gebruikt de teamkleuren nog niet.
-- Knop "Onderschepping" op het live-scherm is op 1366 breed net te smal voor de
-  tekst (stond al zo).
 - Oude wedstrijden zonder gekozen kleur krijgen grijs; de roster-import
   weigert nu onbekende posities (was vrije tekst).
 - Nog niet op een echt tablet of met twee apparaten getest.
