@@ -767,3 +767,218 @@ input:not([type='checkbox']):not([type='radio']) {
     display: block;
   }
 }
+
+/* Player tables on the statistics tab and the report: row highlight (colour + bold + marker). */
+.stat-grid th {
+  white-space: normal;
+  line-height: 1.15;
+  vertical-align: bottom;
+  min-width: 3.4rem;
+}
+.stat-grid th:first-child {
+  min-width: 9rem;
+}
+.stat-grid td:first-child {
+  white-space: nowrap;
+}
+.stat-name-btn {
+  display: block;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.stat-name-btn:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.stats-table tr.stat-group th {
+  position: static;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  min-width: 0;
+}
+.stats-table tr.stat-row-selected td,
+.stats-table tr.stat-row-selected td:first-child {
+  background: #dbeafe;
+  font-weight: 800;
+}
+.stat-row-selected .stat-name-btn::before {
+  content: '▶ ';
+}
+.stat-grid tbody tr {
+  cursor: pointer;
+}
+
+/* Heat legend: one gradient bar per team (light = few, dark = many). */
+.heat-legend-bar {
+  display: inline-block;
+  width: 6rem;
+  height: 0.7rem;
+  border: 1px solid #9ca3af;
+  border-radius: 999px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ---------- Match report: A4 portrait, front and back ---------- */
+.report-head {
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+.report-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.report-score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.25rem 0;
+}
+.report-result {
+  font-size: 2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.report-chip {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  border-radius: 0.4rem;
+  font-weight: 800;
+}
+.report-meta,
+.report-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.report-block {
+  margin-top: 1rem;
+}
+.report-h {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+.report-team {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.report-top {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.report-compare .compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1.5rem;
+}
+.report-compare .compare-head {
+  grid-column: 1 / -1;
+}
+
+@page report {
+  size: A4 portrait;
+  margin: 7mm;
+}
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .report-sheet {
+    page: report;
+  }
+  .report-sheet .report-page {
+    box-shadow: none;
+    border: 0;
+    padding: 0;
+    margin: 0;
+    break-inside: avoid;
+  }
+  .report-sheet .report-page:not(:last-child) {
+    break-after: page;
+  }
+  .report-sheet .report-front {
+    zoom: var(--report-scale, 1);
+  }
+  .report-sheet .space-y-6 > * + *,
+  .report-sheet.space-y-6 > * + * {
+    margin-top: 0 !important;
+  }
+  .report-head {
+    margin-bottom: 1.5mm;
+  }
+  .report-result {
+    font-size: 16pt;
+  }
+  .report-block {
+    margin-top: 2.2mm;
+  }
+  .report-h {
+    font-size: 7pt;
+    margin-bottom: 0.8mm;
+  }
+  .report-title,
+  .report-meta,
+  .report-note,
+  .report-top {
+    font-size: 7pt;
+  }
+  .report-chip {
+    padding: 0 2mm;
+    font-size: 9pt;
+  }
+  .report-flow svg {
+    max-height: 50mm;
+  }
+  .report-compare .compare-row {
+    padding: 0;
+  }
+  .report-sheet .stat-grid {
+    font-size: 6.5pt;
+  }
+  .report-sheet .stat-grid th,
+  .report-sheet .stat-grid td {
+    padding: 0.4mm 0.8mm;
+  }
+  .report-sheet .stat-grid th {
+    font-size: 5pt;
+    min-width: 0;
+  }
+  .report-sheet .stat-grid th:first-child {
+    min-width: 0;
+    width: 30mm;
+  }
+  .report-sheet .stat-name-btn {
+    min-height: 0;
+  }
+  .stats-table tr.stat-row-selected td,
+  .stats-table tr.stat-row-selected td:first-child {
+    background: transparent;
+    font-weight: inherit;
+  }
+  .stat-row-selected .stat-name-btn::before {
+    content: '';
+  }
+}

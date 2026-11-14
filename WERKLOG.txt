@@ -78,6 +78,19 @@ Groep 5 - aanpassingen na jouw feedback (commits 5c4f2c9, 30c2e9f, cf78a21, 3b22
 - Rapport: in "Doelpunten en schoten" en "Nog invullen" staat de laatste actie
   bovenaan en de allereerste onderaan.
 
+Groep 6 - statistieken, rapport en heatmap (15 november 2026)
+- Statistieken-tab: nieuwe tabellen Veldspelers (16 kolommen) en Keepers (8
+  kolommen) met lege cellen i.p.v. nullen, rijmarkering bij klikken en een
+  vaste naamkolom (src/lib/statTables.ts, src/components/PlayerStatTables.tsx).
+- Rapport: voor- en achterkant op A4 staand (src/components/MatchReport.tsx,
+  SheetPage). Print-CSS met benoemde pagina, harde pagina-einde en
+  print-color-adjust; de voorkant krimpt automatisch bij grote teams.
+- Heatmap: elk team op zijn eigen helft, teamnaam bij het doel, kleurverloop in
+  de teamkleur en een legenda (src/lib/heat.ts, Court.tsx, TeamHeat.tsx).
+  Zonder actiefilter alleen schoten en doelpunten.
+- De oude tabellen Spelers en Keepers op de Statistieken-tab zijn vervangen;
+  Seizoen en Spelerspagina gebruiken nog de oude tabelcomponenten.
+
 GECONTROLEERD IN DE APP (browser, 1366x768)
 - Klok liep door tijdens het invoeren van een actie en bij het openen van de
   Stop-dialoog; stopte alleen bij Timeout.

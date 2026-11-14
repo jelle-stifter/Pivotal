@@ -63,3 +63,36 @@ describe('heatGrid resolution', () => {
     expect(20 / g.length).toBe(0.5)
   })
 })
+
+import { heatByTeam, toCourtFrame } from './heat'
+
+describe('heatByTeam (each team on its own half)', () => {
+  const match = { homeTeamId: 'H', awayTeamId: 'A' }
+  const acts = [
+    { teamId: 'H', x: 0.9, y: 0.2 },
+    { teamId: 'A', x: 0.9, y: 0.2 },
+  ]
+  it('draws the home team at the right goal and the away team at the left goal', () => {
+    const [h, a] = heatByTeam(acts, match)
+    expect(h.attacksRight).toBe(true)
+    expect(h.points[0]).toEqual({ x: 0.9, y: 0.2 })
+    expect(a.attacksRight).toBe(false)
+    expect(a.points[0].x).toBeCloseTo(0.1)
+    expect(a.points[0].y).toBeCloseTo(0.8)
+  })
+  it('swaps the sides when the home team attacks left', () => {
+    const [h, a] = heatByTeam(acts, { ...match, homeAttacksRight: false })
+    expect(h.attacksRight).toBe(false)
+    expect(h.points[0].x).toBeCloseTo(0.1)
+    expect(a.attacksRight).toBe(true)
+  })
+  it('keeps the heat of one team out of the other half', () => {
+    const [h, a] = heatByTeam([acts[0]], match)
+    expect(h.points).toHaveLength(1)
+    expect(a.points).toHaveLength(0)
+    expect(a.grid.flat().every((v) => v === 0)).toBe(true)
+  })
+  it('toCourtFrame mirrors both axes for a team attacking left', () => {
+    expect(toCourtFrame({ x: 1, y: 0 }, false)).toEqual({ x: 0, y: 1 })
+  })
+})

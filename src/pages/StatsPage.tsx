@@ -7,15 +7,17 @@ import { db } from '../db/schema'
 import { ACTION_META } from '../lib/actions'
 import { actionsCsv, csvFileName, playerStatsCsv } from '../lib/csv'
 import { downloadText } from '../lib/download'
-import Court, { CourtLegend } from '../components/Court'
+import TeamHeat from '../components/TeamHeat'
+import { FieldPlayersTable, KeepersTable } from '../components/PlayerStatTables'
 import CompareBars from '../components/CompareBars'
 import ScoreFlow from '../components/ScoreFlow'
 import ScoreHero from '../components/ScoreHero'
 import { matchColors } from '../lib/teamColors'
 import { biggestLead, compareRows, scoreTimeline, topScorers } from '../lib/analysis'
-import { KeeperTable, TotalsTable } from '../components/StatsTables'
+import { TotalsTable } from '../components/StatsTables'
 import { hasPosition } from '../lib/court'
-import { heatGrid } from '../lib/heat'
+import { isShot } from '../lib/shots'
+import { hasFieldData } from '../lib/statTables'
 import { periodLabels } from '../lib/periods'
 import {
   filterActions,
@@ -108,8 +110,10 @@ function StatsScreen({
 
   // Heatmap: the filtered actions that carry a court position (older actions
   // and keyboard-only entries have none and are simply not drawn).
-  const positioned = filtered.filter(hasPosition)
-  const heat = heatView === 'heat' ? heatGrid(positioned) : null
+  // Without an action filter the heatmap shows shots and goals only (stops and
+  // turnovers lie on the own half and would blur the picture).
+  const heatable = filter.type === undefined ? filtered.filter(isShot) : filtered
+  const positioned = heatable.filter(hasPosition)
   const heatPlayer = filter.playerId
     ? players.find((p) => p.id === filter.playerId)
     : undefined
@@ -156,6 +160,22 @@ function StatsScreen({
     gkPlayers.map((p) => p.id),
   )
   const unassigned = goalsWithoutKeeper(gkActions)
+
+  // Table 1 (field players): per team, everyone who is not a keeper (a keeper
+  // only when there is field data), in team order; follows the filters.
+  const fieldGroups = matchTeams
+    .filter((id) => filter.teamId === undefined || id === filter.teamId)
+    .map((id) => ({
+      key: id,
+      title: teamName(id),
+      rows: rosterRows
+        .filter((p) => p.teamId === id && (!gkIds.has(p.id) || hasFieldData(pTotals.get(p.id) ?? emptyTotals())))
+        .map((p) => ({
+          key: p.id,
+          label: `#${p.number} ${p.name}`,
+          totals: pTotals.get(p.id) ?? emptyTotals(),
+        })),
+    }))
 
   function set<K extends keyof ActionFilter>(
     key: K,
@@ -393,20 +413,13 @@ function StatsScreen({
         />
       </section>
 
-      <section className="card" aria-label="Spelerstotalen">
-        <h3 className="section-title mb-2">Spelers</h3>
-        <TotalsTable
-          rows={rosterRows.map((p) => ({
-            key: p.id,
-            label: `#${p.number} ${p.name}`,
-            sub: teamName(p.teamId),
-            totals: pTotals.get(p.id) ?? emptyTotals(),
-          }))}
-          labelHeader="Speler"
-          types={visibleTypes(pTotals.values())}
-          showTeam
-          showTotal
-        />
+      <section className="card" aria-label="Veldspelers">
+        <h3 className="section-title mb-2">Veldspelers</h3>
+        <FieldPlayersTable groups={fieldGroups} />
+        <p className="mt-2 text-xs text-slate-500">
+          Klik op een naam of een waarde om de rij van die speler te markeren; klik nog eens om het op te heffen. Een
+          lege cel betekent: geen gegevens. Schotpercentage = totaal doelpunten / totaal schoten op doel.
+        </p>
       </section>
 
       <section className="card space-y-3" aria-label="Heatmap">
@@ -420,7 +433,7 @@ function StatsScreen({
                   ? teamName(filter.teamId)
                   : 'Beide teams'}
               {' · '}
-              {filter.type ? ACTION_META[filter.type].label : 'Alle acties'}
+              {filter.type ? ACTION_META[filter.type].label : 'Schoten en doelpunten'}
               {filter.period
                 ? ` · ${periodLabels(match.format)[filter.period - 1]}`
                 : ''}
@@ -447,10 +460,10 @@ function StatsScreen({
         </div>
 
         <p className="text-sm text-slate-600" aria-live="polite">
-          {positioned.length} van {filtered.length} acties hebben een positie
+          {positioned.length} van {heatable.length} {filter.type === undefined ? 'schoten en doelpunten' : 'acties'} hebben een positie
         </p>
 
-        {filtered.length === 0 ? (
+        {heatable.length === 0 ? (
           <p className="py-6 text-center text-slate-500">
             Geen acties voor deze filters.
           </p>
@@ -461,41 +474,31 @@ function StatsScreen({
             actielijst op het live-scherm.
           </p>
         ) : (
-          <div className="mx-auto max-w-3xl space-y-2">
-            <Court
+          <div className="mx-auto max-w-3xl">
+            <TeamHeat
+              match={match}
+              teamName={teamName}
+              actions={positioned}
+              view={heatView}
               label={`Heatmap van ${positioned.length} acties`}
-              heat={heat}
-              dots={
-                heatView === 'dots'
-                  ? positioned.map((a) => ({ x: a.x, y: a.y, type: a.type }))
-                  : undefined
-              }
             />
-            {heatView === 'dots' ? (
-              <CourtLegend types={[...new Set(positioned.map((a) => a.type))]} />
-            ) : (
-              <p className="text-xs text-slate-500">
-                Geel = weinig, rood = veel.
-              </p>
-            )}
           </div>
         )}
         <p className="text-xs text-slate-500">
           Gebruikt de filters hierboven: kies een speler en een actie voor een
           persoonlijke heatmap. Het veld is altijd vanuit het aanvalsperspectief
-          getekend: het team valt aan naar rechts, ook na de rust.
+          getekend: elk team heeft zijn eigen helft. Het team dat naar rechts aanvalt staat rechts, het andere team links.
         </p>
       </section>
 
       <section className="card" aria-label="Keepers">
         <h3 className="section-title mb-2">Keepers</h3>
-        <KeeperTable
+        <KeepersTable
           rows={gkRows.map((g) => {
             const pl = players.find((x) => x.id === g.playerId)
             return {
               key: g.playerId,
-              label: pl ? `#${pl.number} ${pl.name}` : '?',
-              team: pl ? teamName(pl.teamId) : '',
+              label: pl ? `#${pl.number} ${pl.name} (${teamName(pl.teamId)})` : '?',
               stats: g,
             }
           })}
@@ -508,9 +511,9 @@ function StatsScreen({
           </p>
         )}
         <p className="mt-3 text-xs text-slate-500">
-          De keepertabel negeert het actie- en spelerfilter, omdat saves en
-          tegengoals samen nodig zijn voor het percentage. Team- en
-          periodefilter gelden wel.
+          De keepertabel negeert het actie- en spelerfilter, omdat stops en
+          doelpunten tegen samen nodig zijn voor het percentage. Team- en
+          periodefilter gelden wel. Schotpercentage = totaal stops / totaal schoten op doel.
         </p>
       </section>
     </div>

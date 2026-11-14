@@ -1,13 +1,12 @@
 import type { MouseEvent } from 'react'
 import { ACTION_COLOR, ACTION_META } from '../lib/actions'
 import type { Point } from '../lib/court'
+import { textOn } from '../lib/teamColors'
 import { ACTION_TYPES, type ActionType } from '../types'
 
-// Court in metres (40 x 20) with a 1 m margin so the goals stay visible.
-const M = 1
+// Court in metres (40 x 20) with a margin so the goals stay visible.
 const W = 40
 const H = 20
-const VIEW = `${-M} ${-M} ${W + 2 * M} ${H + 2 * M}`
 
 export interface CourtDot extends Point {
   type: ActionType
@@ -22,6 +21,10 @@ interface Props {
   dots?: CourtDot[]
   /** Heat layer: grid[row][col] in 0..1. */
   heat?: number[][] | null
+  /** One heat layer per team in the team colour: light (little) to dark (a lot) of one hue. */
+  heatLayers?: { grid: number[][]; color: string }[]
+  /** Team names along the goals; the court gets a wider margin for them. */
+  goalLabels?: { side: 'l' | 'r'; text: string; color: string }[]
   label: string
   className?: string
 }
@@ -43,9 +46,13 @@ export default function Court({
   pending,
   dots,
   heat,
+  heatLayers,
+  goalLabels,
   label,
   className,
 }: Props) {
+  const M = goalLabels ? 3.2 : 1
+  const VIEW = `${-M} ${-M} ${W + 2 * M} ${H + 2 * M}`
   function handleClick(e: MouseEvent<SVGSVGElement>) {
     if (!onPick) return
     const rect = e.currentTarget.getBoundingClientRect()
@@ -80,6 +87,26 @@ export default function Court({
       </defs>
 
       <rect x="0" y="0" width={W} height={H} fill="#f3f4f6" />
+
+      {heatLayers?.map((layer, i) => (
+        <g key={i} clipPath="url(#court-clip)" pointerEvents="none" fill={layer.color} shapeRendering="crispEdges">
+          {layer.grid.flatMap((row, r) =>
+            row.map((v, c) =>
+              v < 0.06 ? null : (
+                <rect
+                  key={`${r}-${c}`}
+                  x={(c * W) / row.length}
+                  y={(r * H) / layer.grid.length}
+                  width={W / row.length}
+                  height={H / layer.grid.length}
+                  // Same hue everywhere: almost white for few shots, darkest for many.
+                  fillOpacity={0.95 * Math.pow(v, 1.15)}
+                />
+              ),
+            ),
+          )}
+        </g>
+      ))}
 
       {heat && (
         <g clipPath="url(#court-clip)" pointerEvents="none">
@@ -124,6 +151,29 @@ export default function Court({
         <line x1="7" y1="9.5" x2="7" y2="10.5" />
         <line x1={W - 7} y1="9.5" x2={W - 7} y2="10.5" />
       </g>
+
+      {goalLabels?.map((g) => {
+        const w = Math.min(19, Math.max(5, g.text.length * 0.95 + 2))
+        const cx = g.side === 'l' ? -M / 2 - 0.2 : W + M / 2 + 0.2
+        return (
+          <g
+            key={g.side}
+            transform={`translate(${cx} ${H / 2}) rotate(${g.side === 'l' ? -90 : 90})`}
+            pointerEvents="none"
+          >
+            <rect x={-w / 2} y="-1.1" width={w} height="2.2" rx="0.5" fill={g.color} />
+            <text
+              textAnchor="middle"
+              dominantBaseline="central"
+              fontSize="1.4"
+              fontWeight="700"
+              fill={textOn(g.color)}
+            >
+              {g.text}
+            </text>
+          </g>
+        )
+      })}
 
       {dots?.map((d, i) => (
         <circle

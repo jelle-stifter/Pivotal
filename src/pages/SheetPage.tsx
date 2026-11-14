@@ -1,24 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/schema'
-import { KeeperTable, TotalsTable } from '../components/StatsTables'
-import {
-  emptyTotals,
-  goalkeeperStats,
-  goalsWithoutKeeper,
-  playerTotals,
-  score,
-  scoreByPeriod,
-  visibleTypes,
-} from '../lib/stats'
-import { periodLabel } from '../lib/periods'
+import MatchReport from '../components/MatchReport'
 import { KeeperGoalSection, MatchNotes, ShotsSection, TodoSection } from '../components/ReportSections'
 
-function formatDate(iso: string) {
-  const [y, m, d] = iso.split('-')
-  return `${d}-${m}-${y}`
-}
-
-/** Printable match sheet, modelled on the "Wedstrijdstatistieken" sheet. */
+/**
+ * Match report. The report itself (front and back, printable on one A4 sheet)
+ * is MatchReport. Below it, on screen only, the post-match editing: fill in
+ * what was skipped, goal zones per keeper, notes and the shot cards.
+ */
 export default function SheetPage({ matchId }: { matchId: string }) {
   const matches = useLiveQuery(
     () => db.matches.where('id').equals(matchId).toArray(),
@@ -55,34 +44,6 @@ export default function SheetPage({ matchId }: { matchId: string }) {
     )
 
   const teamName = (id: string) => teams.find((t) => t.id === id)?.name ?? '?'
-  const result = score(actions, match.homeTeamId, match.awayTeamId)
-  const periods = scoreByPeriod(
-    actions,
-    match.homeTeamId,
-    match.awayTeamId,
-    match.format,
-  )
-  const totals = playerTotals(actions)
-  const types = visibleTypes(totals.values())
-
-  const gkIds = new Set(players.filter((p) => p.isGoalkeeper).map((p) => p.id))
-  for (const a of actions) if (a.goalkeeperId) gkIds.add(a.goalkeeperId)
-  const keeperRows = goalkeeperStats(actions, [...gkIds])
-    .filter(
-      (g) =>
-        g.saves + g.goalsConceded + g.penaltySaves + g.penaltyGoalsConceded > 0,
-    )
-    .map((g) => {
-      const p = players.find((x) => x.id === g.playerId)
-      return {
-        key: g.playerId,
-        label: p ? `#${p.number} ${p.name}` : '?',
-        team: p ? teamName(p.teamId) : '',
-        stats: g,
-      }
-    })
-    .sort((a, b) => a.team.localeCompare(b.team))
-  const unassigned = goalsWithoutKeeper(actions)
 
   return (
     <div className="space-y-6">
@@ -91,98 +52,31 @@ export default function SheetPage({ matchId }: { matchId: string }) {
           ← Statistieken
         </a>
         <button className="btn btn-primary" onClick={() => window.print()}>
-          Afdrukken / PDF
+          Afdrukken
         </button>
       </div>
 
-      <header className="card text-center">
-        <div className="text-sm font-semibold uppercase tracking-widest text-slate-500">
-          Wedstrijdrapport
-        </div>
-        <h2 className="mt-1 text-2xl font-black">
-          {teamName(match.homeTeamId)} – {teamName(match.awayTeamId)}
-        </h2>
-        <div className="mt-1 text-sm text-slate-600">
-          {formatDate(match.date)}
-          {match.location ? ` · ${match.location}` : ''}
-        </div>
+      <MatchReport match={match} teams={teams} players={players} actions={actions} />
 
-        <div className="mx-auto mt-4 grid max-w-xl grid-cols-[1fr_auto_1fr] items-center gap-x-4 gap-y-1">
-          <div className="text-right text-xs font-bold uppercase tracking-wider text-slate-500">
-            Thuis
-          </div>
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Eindstand
-          </div>
-          <div className="text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-            Uit
-          </div>
-          <div className="text-right text-lg font-semibold">{teamName(match.homeTeamId)}</div>
-          <div className="text-4xl font-black tabular-nums">
-            {result.home} – {result.away}
-          </div>
-          <div className="text-left text-lg font-semibold">{teamName(match.awayTeamId)}</div>
-        </div>
+      <div className="no-print space-y-6">
+        <TodoSection match={match} actions={actions} players={players} teamName={teamName} />
 
-        <div className="mt-3 flex flex-wrap justify-center gap-x-6 gap-y-1 text-sm text-slate-600">
-          {periods.map((p, i) => (
-            <span key={i}>
-              {periodLabel(match.format, i + 1)}:{' '}
-              <strong className="tabular-nums">
-                {p.home} – {p.away}
-              </strong>
-            </span>
-          ))}
-        </div>
-      </header>
+        <KeeperGoalSection actions={actions} players={players} />
 
-      <TodoSection match={match} actions={actions} players={players} teamName={teamName} />
+        <MatchNotes match={match} />
 
-      {[match.homeTeamId, match.awayTeamId].map((tid) => (
-        <section key={tid} className="card" aria-label={teamName(tid)}>
-          <h3 className="section-title mb-2">{teamName(tid)}</h3>
-          <TotalsTable
-            labelHeader="Speler"
-            types={types}
-            showTotal
-            rows={players
-              .filter((p) => p.teamId === tid)
-              .sort((a, b) => a.number - b.number)
-              .map((p) => ({
-                key: p.id,
-                label: `#${p.number} ${p.name}`,
-                totals: totals.get(p.id) ?? emptyTotals(),
-              }))}
-          />
-        </section>
-      ))}
+        <ShotsSection
+          actions={actions}
+          players={players}
+          teamName={teamName}
+          teamIds={[match.homeTeamId, match.awayTeamId]}
+        />
 
-      <section className="card" aria-label="Keepers">
-        <h3 className="section-title mb-2">Keepers</h3>
-        <KeeperTable rows={keeperRows} />
-        {unassigned > 0 && (
-          <p className="mt-2 text-xs text-amber-700">
-            {unassigned} goal{unassigned === 1 ? '' : 's'} zonder toegekende keeper
-            tellen niet mee in de keeperstatistieken.
-          </p>
-        )}
-      </section>
-
-      <KeeperGoalSection actions={actions} players={players} />
-
-      <MatchNotes match={match} />
-
-      <ShotsSection
-        actions={actions}
-        players={players}
-        teamName={teamName}
-        teamIds={[match.homeTeamId, match.awayTeamId]}
-      />
-
-      <p className="text-center text-xs text-slate-400">
-        Schot% = (goals + 7m-goals) / (goals + missers + 7m-goals + 7m gestopt +
-        7m niet op doel). Gemaakt met Backhand.
-      </p>
+        <p className="text-center text-xs text-slate-400">
+          Schotpercentage = totaal doelpunten / totaal schoten op doel (doelpunten + missers + 7m-doelpunt + 7m-stop +
+          7m niet op doel). Gemaakt met Backhand.
+        </p>
+      </div>
     </div>
   )
 }
