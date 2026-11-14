@@ -11,6 +11,7 @@ import Court, { CourtLegend } from '../components/Court'
 import CompareBars from '../components/CompareBars'
 import ScoreFlow from '../components/ScoreFlow'
 import ScoreHero from '../components/ScoreHero'
+import { matchColors } from '../lib/teamColors'
 import { biggestLead, compareRows, scoreTimeline, topScorers } from '../lib/analysis'
 import { KeeperTable, TotalsTable } from '../components/StatsTables'
 import { hasPosition } from '../lib/court'
@@ -207,6 +208,8 @@ function StatsScreen({
         date={match.date}
         location={match.location}
         half={match.format === 2 && actions.some((a) => a.period >= 2) ? scoreByPeriod(actions, match.homeTeamId, match.awayTeamId, 1)[0] : null}
+        homeColor={matchColors(match).home}
+        awayColor={matchColors(match).away}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -216,6 +219,8 @@ function StatsScreen({
             rows={compareRows(actions, match.homeTeamId, match.awayTeamId)}
             homeName={teamName(match.homeTeamId)}
             awayName={teamName(match.awayTeamId)}
+            homeColor={matchColors(match).home}
+            awayColor={matchColors(match).away}
           />
         </section>
         <section className="card" aria-label="Scoreverloop">
@@ -225,6 +230,8 @@ function StatsScreen({
             homeName={teamName(match.homeTeamId)}
             awayName={teamName(match.awayTeamId)}
             boundaries={match.format === 2 ? [30 * 60_000] : [20 * 60_000, 40 * 60_000]}
+            homeColor={matchColors(match).home}
+            awayColor={matchColors(match).away}
           />
           <h3 className="section-title mb-1 mt-5">Topscorers</h3>
           {scorers.length === 0 ? (

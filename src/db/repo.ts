@@ -155,6 +155,8 @@ export function createRepo(db: PivotalDB = defaultDb) {
       format?: MatchFormat
       ownSide?: Side
       opponentColor?: string
+      homeColor?: string
+      awayColor?: string
     }): Promise<Match> {
       if (m.homeTeamId === m.awayTeamId)
         throw new Error('Thuis- en uitteam moeten verschillen')

@@ -1,5 +1,6 @@
 import { formatPenaltyTimes, type ActivePenalty } from '../../lib/clock'
 import type { ScorerRow } from '../../lib/live'
+import { textOn } from '../../lib/teamColors'
 import type { Player, Team } from '../../types'
 
 function ScorerList({
@@ -16,10 +17,9 @@ function ScorerList({
   return (
     <section aria-label={title}>
       <h3
-        className="mb-1 flex items-center gap-2 text-xs font-bold uppercase tracking-wide"
-        style={{ color }}
+        className="mb-1 inline-block rounded px-2 py-0.5 text-xs font-bold uppercase tracking-wide"
+        style={{ background: color, color: textOn(color) }}
       >
-        <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: color }} />
         {title}
       </h3>
       {rows.length === 0 ? (

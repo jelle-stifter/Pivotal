@@ -5,11 +5,18 @@ export default function CompareBars({
   rows,
   homeName,
   awayName,
+  homeColor,
+  awayColor,
 }: {
   rows: CompareRow[]
   homeName: string
   awayName: string
+  /** Team colours (hex); the best bar is solid, the other one lighter. */
+  homeColor?: string
+  awayColor?: string
 }) {
+  const bar = (hex: string | undefined, best: boolean) =>
+    hex ? { background: hex, opacity: best ? 1 : 0.5 } : {}
   if (rows.length === 0)
     return (
       <p className="py-6 text-center text-slate-500">
@@ -45,14 +52,14 @@ export default function CompareBars({
                 <div
                   className="compare-bar"
                   data-best={better === 'home'}
-                  style={{ width: `${(r.home / max) * 100}%` }}
+                  style={{ width: `${(r.home / max) * 100}%`, ...bar(homeColor, better === 'home') }}
                 />
               </div>
               <div className="compare-track compare-track-away">
                 <div
                   className="compare-bar compare-bar-away"
                   data-best={better === 'away'}
-                  style={{ width: `${(r.away / max) * 100}%` }}
+                  style={{ width: `${(r.away / max) * 100}%`, ...bar(awayColor, better === 'away') }}
                 />
               </div>
               <span

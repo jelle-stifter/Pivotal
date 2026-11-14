@@ -13,6 +13,47 @@ import { useMemberships } from '../hooks/useAccess'
 import { isViewerOnly } from '../lib/access'
 import MatchPrep from '../components/MatchPrep'
 import type { Side } from '../types'
+import {
+  DEFAULT_OPPONENT_HEX,
+  DEFAULT_OWN_HEX,
+  TEAM_COLORS,
+  colorsTooClose,
+} from '../lib/teamColors'
+
+/** Pick a team colour from the palette (main colours and darker/lighter variants). */
+function ColorPicker({
+  legend,
+  value,
+  onChange,
+}: {
+  legend: string
+  value: string
+  onChange: (hex: string) => void
+}) {
+  return (
+    <fieldset>
+      <legend className="label mb-1">{legend}</legend>
+      <div className="flex flex-wrap gap-2">
+        {TEAM_COLORS.map((c) => (
+          <button
+            key={c.hex}
+            type="button"
+            title={c.name}
+            aria-label={c.name}
+            aria-pressed={value === c.hex}
+            onClick={() => onChange(c.hex)}
+            className="h-11 w-11 rounded-full border border-slate-300"
+            style={{
+              background: c.hex,
+              outline: value === c.hex ? '3px solid #111827' : 'none',
+              outlineOffset: 2,
+            }}
+          />
+        ))}
+      </div>
+    </fieldset>
+  )
+}
 
 function today() {
   const d = new Date()
@@ -44,6 +85,8 @@ export default function MatchesPage() {
   const [location, setLocation] = useState('')
   const [time, setTime] = useState('')
   const [ownSide, setOwnSide] = useState<Side>('home')
+  const [homeColor, setHomeColor] = useState(DEFAULT_OWN_HEX)
+  const [awayColor, setAwayColor] = useState(DEFAULT_OPPONENT_HEX)
   const [prepId, setPrepId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
@@ -54,6 +97,11 @@ export default function MatchesPage() {
     setError('')
     if (!homeId || !awayId) return setError('Kies een thuis- en een uitteam.')
     if (!date) return setError('Kies een datum.')
+    if (
+      colorsTooClose(homeColor, awayColor) &&
+      !confirm('De teamkleuren lijken erg op elkaar. Ben je zeker?')
+    )
+      return
     try {
       await repo.addMatch({
         homeTeamId: homeId,
@@ -62,6 +110,8 @@ export default function MatchesPage() {
         time: time || undefined,
         location: location.trim() || undefined,
         ownSide,
+        homeColor,
+        awayColor,
       })
       setHomeId('')
       setAwayId('')
@@ -210,6 +260,18 @@ export default function MatchesPage() {
                   placeholder="Bijv. Sporthal De Kuil"
                 />
               </label>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ColorPicker
+                legend={`Kleur ${homeId ? teamName(homeId) : 'thuisteam'}`}
+                value={homeColor}
+                onChange={setHomeColor}
+              />
+              <ColorPicker
+                legend={`Kleur ${awayId ? teamName(awayId) : 'uitteam'}`}
+                value={awayColor}
+                onChange={setAwayColor}
+              />
             </div>
             <div className="flex flex-wrap items-end justify-between gap-4">
               <fieldset>

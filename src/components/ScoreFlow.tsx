@@ -11,11 +11,16 @@ export default function ScoreFlow({
   awayName,
   /** Clock times (ms) of period boundaries, drawn as dashed lines. */
   boundaries = [],
+  homeColor = 'var(--brand)',
+  awayColor = 'var(--away)',
 }: {
   points: TimelinePoint[]
   homeName: string
   awayName: string
   boundaries?: number[]
+  /** Team colours (hex). */
+  homeColor?: string
+  awayColor?: string
 }) {
   const last = points[points.length - 1]
   const maxT = Math.max(
@@ -94,16 +99,16 @@ export default function ScoreFlow({
             strokeDasharray="4 4"
           />
         ))}
-        <path d={path('away')} fill="none" stroke="var(--away)" strokeWidth="2.5" strokeLinejoin="round" />
-        <path d={path('home')} fill="none" stroke="var(--brand)" strokeWidth="2.5" strokeLinejoin="round" />
+        <path d={path('away')} fill="none" stroke={awayColor} strokeWidth="2.5" strokeLinejoin="round" />
+        <path d={path('home')} fill="none" stroke={homeColor} strokeWidth="2.5" strokeLinejoin="round" />
       </svg>
       <figcaption className="mt-1 flex flex-wrap gap-4 text-sm text-slate-600">
         <span className="flex items-center gap-1.5">
-          <i className="legend-dot" style={{ background: 'var(--brand)' }} />
+          <i className="legend-dot" style={{ background: homeColor }} />
           {homeName} ({last.home})
         </span>
         <span className="flex items-center gap-1.5">
-          <i className="legend-dot" style={{ background: 'var(--away)' }} />
+          <i className="legend-dot" style={{ background: awayColor }} />
           {awayName} ({last.away})
         </span>
       </figcaption>

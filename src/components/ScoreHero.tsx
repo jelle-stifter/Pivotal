@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { textOn } from '../lib/teamColors'
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
@@ -17,6 +18,9 @@ interface Props {
   /** Optional line under the score (e.g. clock and period on the live page). */
   children?: ReactNode
   live?: boolean
+  /** Team colours (hex): the badges take them. */
+  homeColor?: string
+  awayColor?: string
 }
 
 /** Dark scoreboard header shared by live, statistics and dashboard views. */
@@ -30,7 +34,11 @@ export default function ScoreHero({
   half,
   children,
   live,
+  homeColor,
+  awayColor,
 }: Props) {
+  const badge = (hex?: string) =>
+    hex ? { background: hex, color: textOn(hex), borderColor: hex } : undefined
   const winner =
     homeGoals === awayGoals ? null : homeGoals > awayGoals ? 'home' : 'away'
   return (
@@ -41,7 +49,7 @@ export default function ScoreHero({
       {live && <span className="hero-live">● Live</span>}
       <div className="hero-grid">
         <div className="hero-team" data-win={winner === 'home'}>
-          <span className="hero-badge" aria-hidden>
+          <span className="hero-badge" aria-hidden style={badge(homeColor)}>
             {homeName.slice(0, 2).toUpperCase()}
           </span>
           <span className="hero-name">{homeName}</span>
@@ -52,7 +60,7 @@ export default function ScoreHero({
           <span data-win={winner === 'away'}>{awayGoals}</span>
         </div>
         <div className="hero-team hero-team-away" data-win={winner === 'away'}>
-          <span className="hero-badge" aria-hidden>
+          <span className="hero-badge" aria-hidden style={badge(awayColor)}>
             {awayName.slice(0, 2).toUpperCase()}
           </span>
           <span className="hero-name">{awayName}</span>

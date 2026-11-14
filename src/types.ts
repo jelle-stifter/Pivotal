@@ -109,8 +109,11 @@ export interface Match {
   format: MatchFormat
   /** Which side our own team (HVM) plays on; absent means home. */
   ownSide?: Side
-  /** Colour of the opponent on the live screen (hex). */
+  /** Colour of the opponent on the live screen (hex); only older matches, see homeColor. */
   opponentColor?: string
+  /** Team colours chosen when the match was created (hex, one per side). */
+  homeColor?: string
+  awayColor?: string
   /** Post-match report: free notes about the match. */
   reportNote?: string
   /** Own players that do not play, with the reason. Others are playing. */

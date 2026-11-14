@@ -19,9 +19,8 @@ import {
 } from '../lib/clock'
 import type { FlowSpec } from '../lib/flows'
 import { matchStarted, topScorerRows } from '../lib/live'
+import { matchColors, textOn } from '../lib/teamColors'
 import {
-  OWN_COLOR,
-  OPPONENT_COLOR,
   opponentTeamId,
   ownSide,
   ownTeamId,
@@ -145,7 +144,7 @@ export default function LivePage({ matchId }: { matchId: string }) {
 function PadButton({
   children,
   color,
-  textColor = '#fff',
+  textColor,
   onClick,
   disabled,
   className = '',
@@ -162,7 +161,7 @@ function PadButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      style={{ background: color, color: textColor }}
+      style={{ background: color, color: textColor ?? textOn(color) }}
       className={`min-h-[56px] rounded-xl px-2 text-base font-bold leading-tight shadow-sm transition active:scale-[0.97] disabled:opacity-40 sm:text-lg ${className}`}
     >
       {children}
@@ -239,9 +238,13 @@ function LiveScreen({
   const oppId = opponentTeamId(match)
   const teamOf = (id: string) => teams.find((t) => t.id === id)
   const own = ownSide(match) // the side of our own team (HVM)
-  const colors = { own: OWN_COLOR, opp: OPPONENT_COLOR }
-  const homeColor = (own === 'home' ? colors.own : colors.opp).main
-  const awayColor = (own === 'away' ? colors.own : colors.opp).main
+  const teamColors = matchColors(match)
+  const homeColor = teamColors.home
+  const awayColor = teamColors.away
+  const colors = {
+    own: { main: own === 'home' ? homeColor : awayColor },
+    opp: { main: own === 'home' ? awayColor : homeColor },
+  }
   const result = score(actions, match.homeTeamId, match.awayTeamId)
   // Our own team is always on the left, the opponent on the right.
   const leftSide: Side = own
@@ -464,11 +467,17 @@ function LiveScreen({
           <section className="rounded-2xl bg-black/30 p-3 text-center" aria-label="Stand">
             <h2 className="text-xs font-bold uppercase tracking-widest text-white/60">Stand</h2>
             <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-x-2">
-              <span className="truncate text-lg font-extrabold" style={{ color: sideColor(leftSide) }}>
+              <span
+                className="truncate rounded-md px-2 py-0.5 text-lg font-extrabold"
+                style={{ background: sideColor(leftSide), color: textOn(sideColor(leftSide)) }}
+              >
                 {shortName(teamOf(sideTeamId(leftSide)))}
               </span>
               <span />
-              <span className="truncate text-lg font-extrabold" style={{ color: sideColor(rightSide) }}>
+              <span
+                className="truncate rounded-md px-2 py-0.5 text-lg font-extrabold"
+                style={{ background: sideColor(rightSide), color: textOn(sideColor(rightSide)) }}
+              >
                 {shortName(teamOf(sideTeamId(rightSide)))}
               </span>
               <span className="text-6xl font-extrabold tabular-nums leading-none">{result[leftSide]}</span>
@@ -556,7 +565,7 @@ function LiveScreen({
             opponent={topScorerRows(actions, oppId)}
             own={topScorerRows(actions, ownId)}
             players={players}
-            colors={{ own: colors.own.accent, opp: colors.opp.accent }}
+            colors={{ own: colors.own.main, opp: colors.opp.main }}
           />
         </div>
 
