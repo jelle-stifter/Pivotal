@@ -62,8 +62,8 @@ export default function LiveHistory({
                 <button
                   type="button"
                   onClick={() => setEditing(a)}
-                  className="w-full rounded-md bg-white/5 py-1.5 pl-2.5 pr-2 text-left hover:bg-white/10"
-                  style={{ borderLeft: `4px solid ${color}` }}
+                  className="w-full rounded-md py-1.5 pl-2.5 pr-2 text-left hover:brightness-125"
+                  style={{ background: `${color}38`, borderLeft: `6px solid ${color}` }}
                 >
                   <span className="flex items-center gap-2">
                     <span
