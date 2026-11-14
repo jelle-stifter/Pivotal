@@ -3,6 +3,7 @@ import { repo } from '../../db/repo'
 import { ACTION_META } from '../../lib/actions'
 import {
   buildActions,
+  TODO_ANSWER,
   lastAnsweredKey,
   nextStep,
   type Answers,
@@ -43,6 +44,8 @@ function ItemGrid({
   onAddNumber,
   onSkip,
   skipLabel,
+  onTodo,
+  todoLabel = 'Overslaan, invullen na de wedstrijd',
 }: {
   items: Item[]
   /** Values that are shown first, larger (the coach's top 3 penalty takers). */
@@ -52,6 +55,9 @@ function ItemGrid({
   onAddNumber?: (n: number) => void
   onSkip?: () => void
   skipLabel?: string
+  /** Skip now, fill in after the match (the action is saved as "Nog invullen"). */
+  onTodo?: () => void
+  todoLabel?: string
 }) {
   const [q, setQ] = useState('')
   const text = q.trim().toLowerCase()
@@ -136,6 +142,15 @@ function ItemGrid({
           {skipLabel ?? 'Overslaan'}
         </button>
       )}
+      {onTodo && (
+        <button
+          type="button"
+          onClick={onTodo}
+          className="min-h-[56px] w-full rounded-lg border border-dashed border-amber-300/60 px-4 font-semibold text-amber-200 hover:bg-white/10"
+        >
+          {todoLabel}
+        </button>
+      )}
     </div>
   )
 }
@@ -194,7 +209,7 @@ export default function FlowSheet({
       const clockMs = Math.round(getClockMs())
       for (const d of drafts) await repo.logAction({ ...d, clockMs })
       // The keeper you pick is the keeper on court from now on.
-      if (a.keeper) await repo.setActiveGoalkeeper(match.id, ownSide(match), a.keeper)
+      if (a.keeper && a.keeper !== TODO_ANSWER) await repo.setActiveGoalkeeper(match.id, ownSide(match), a.keeper)
       const who = players.find((p) => p.id === drafts[0]?.playerId)
       const staff = teamOf(drafts[0]?.teamId)?.staff?.find((s) => s.id === drafts[0]?.staffId)
       onClose(
@@ -255,13 +270,21 @@ export default function FlowSheet({
             onPick={answer}
             onSkip={s.optional ? () => answer('') : undefined}
             skipLabel="Geen assist"
+            onTodo={s.optional ? undefined : () => answer(TODO_ANSWER)}
           />
         )
       }
       case 'ownKeeper': {
         const all = playing(ownId)
         const keepers = all.filter((p) => p.isGoalkeeper)
-        return <ItemGrid items={toItems(keepers.length > 0 ? keepers : all)} onPick={answer} />
+        return (
+          <ItemGrid
+            items={toItems(keepers.length > 0 ? keepers : all)}
+            onPick={answer}
+            onTodo={() => answer(TODO_ANSWER)}
+            todoLabel="Weet ik niet, invullen na de wedstrijd"
+          />
+        )
       }
       case 'oppPlayer':
         return (
@@ -269,6 +292,7 @@ export default function FlowSheet({
             items={toItems(playing(oppId))}
             onPick={answer}
             onAddNumber={(n) => void addOpponent(n)}
+            onTodo={() => answer(TODO_ANSWER)}
           />
         )
       case 'position':
@@ -353,6 +377,7 @@ export default function FlowSheet({
                       )
                 : undefined
             }
+            onTodo={() => answer(TODO_ANSWER)}
           />
         )
       }

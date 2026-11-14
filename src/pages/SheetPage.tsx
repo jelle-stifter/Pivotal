@@ -11,7 +11,7 @@ import {
   visibleTypes,
 } from '../lib/stats'
 import { periodLabel } from '../lib/periods'
-import { KeeperGoalSection, MatchNotes, ShotsSection } from '../components/ReportSections'
+import { KeeperGoalSection, MatchNotes, ShotsSection, TodoSection } from '../components/ReportSections'
 
 function formatDate(iso: string) {
   const [y, m, d] = iso.split('-')
@@ -135,6 +135,8 @@ export default function SheetPage({ matchId }: { matchId: string }) {
           ))}
         </div>
       </header>
+
+      <TodoSection match={match} actions={actions} players={players} teamName={teamName} />
 
       {[match.homeTeamId, match.awayTeamId].map((tid) => (
         <section key={tid} className="card" aria-label={teamName(tid)}>

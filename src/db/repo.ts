@@ -12,6 +12,8 @@ import {
   type PositionCode,
   type Side,
   type Team,
+  type TodoField,
+  type Timeout,
 } from '../types'
 
 const uid = () => crypto.randomUUID()
@@ -183,6 +185,14 @@ export function createRepo(db: PivotalDB = defaultDb) {
         activeGoalkeeper: { ...m.activeGoalkeeper, [side]: playerId },
       })
     },
+    /** Timeouts only count for the report: who, and when on the game clock. */
+    async addTimeout(matchId: string, timeout: Timeout) {
+      await db.transaction('rw', db.matches, async () => {
+        const m = await db.matches.get(matchId)
+        if (!m) throw new Error('Wedstrijd niet gevonden')
+        await db.matches.update(matchId, { timeouts: [...(m.timeouts ?? []), timeout] })
+      })
+    },
     async deleteMatch(id: string) {
       await db.transaction('rw', db.matches, db.actions, async () => {
         await db.actions.where('matchId').equals(id).delete()
@@ -212,6 +222,8 @@ export function createRepo(db: PivotalDB = defaultDb) {
       fouledId?: string
       foulerId?: string
       staffId?: string
+      shooterId?: string
+      todo?: TodoField[]
       rebound?: boolean
       groupId?: string
     }): Promise<Action> {
@@ -219,7 +231,12 @@ export function createRepo(db: PivotalDB = defaultDb) {
       const match = await db.matches.get(input.matchId)
       if (!match) throw new Error('Wedstrijd niet gevonden')
       let goalkeeperId: string | undefined = input.goalkeeperId
-      if (goalkeeperId === undefined && KEEPER_FACED_TYPES.includes(input.type)) {
+      // A keeper that was skipped ("invullen na de wedstrijd") is not guessed.
+      if (
+        goalkeeperId === undefined &&
+        !input.todo?.includes('keeper') &&
+        KEEPER_FACED_TYPES.includes(input.type)
+      ) {
         const opposing: Side =
           input.teamId === match.homeTeamId ? 'away' : 'home'
         goalkeeperId = match.activeGoalkeeper[opposing]
@@ -255,6 +272,8 @@ export function createRepo(db: PivotalDB = defaultDb) {
           | 'period'
           | 'matchClockMs'
           | 'goalkeeperId'
+          | 'position'
+          | 'shooterId'
           | 'x'
           | 'y'
           | 'bounce'
@@ -267,8 +286,10 @@ export function createRepo(db: PivotalDB = defaultDb) {
       const current = await db.actions.get(id)
       if (!current) throw new Error('Actie niet gevonden')
       const next = { ...patch }
-      // Keep goalkeeperId consistent when the action type changes.
-      if (patch.type !== undefined && patch.type !== current.type) {
+      // Keep goalkeeperId consistent when the action type changes (unless the caller sets it).
+      if ('goalkeeperId' in patch) {
+        next.goalkeeperId = patch.goalkeeperId || undefined
+      } else if (patch.type !== undefined && patch.type !== current.type) {
         const wasFaced = KEEPER_FACED_TYPES.includes(current.type)
         const isFaced = KEEPER_FACED_TYPES.includes(patch.type)
         if (isFaced && wasFaced) {
@@ -285,6 +306,12 @@ export function createRepo(db: PivotalDB = defaultDb) {
         } else {
           next.goalkeeperId = undefined
         }
+      }
+      // A position code gets its representative spot (heatmaps), unless a spot was given.
+      if (patch.position !== undefined && patch.x === undefined && patch.y === undefined) {
+        const spot = POSITION_POINT[patch.position]
+        next.x = spot.x
+        next.y = spot.y
       }
       await db.actions.update(id, next)
     },

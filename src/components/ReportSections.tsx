@@ -2,9 +2,69 @@ import { useEffect, useState } from 'react'
 import GoalGrid from './GoalGrid'
 import { BounceMap } from './HalfCourt'
 import ShotCard from './ShotCard'
+import ActionEditor from './ActionEditor'
 import { repo } from '../db/repo'
+import { ACTION_META } from '../lib/actions'
+import { byTime, missingFields, runningScores, TODO_LABEL } from '../lib/history'
 import { hasShotDetail, isShot, keeperGrids } from '../lib/shots'
+import { formatClock } from '../lib/time'
 import type { Action, Match, Player } from '../types'
+
+const standText = (s: { home: number; away: number } | undefined) => (s ? `${s.home}–${s.away}` : '')
+
+/** Actions with skipped fields during the match: fill them in here. */
+export function TodoSection({
+  match,
+  actions,
+  players,
+  teamName,
+}: {
+  match: Match
+  actions: Action[]
+  players: Player[]
+  teamName: (id: string) => string
+}) {
+  const [editing, setEditing] = useState<string | null>(null)
+  const scores = runningScores(actions, match.homeTeamId, match.awayTeamId)
+  const todo = byTime(actions).filter((a) => missingFields(a).length > 0)
+  if (todo.length === 0) return null
+  const who = (a: Action) => {
+    const p = players.find((x) => x.id === a.playerId)
+    return p ? `#${p.number} ${p.name}` : '?'
+  }
+  return (
+    <section className="card no-print" aria-label="Nog invullen">
+      <h3 className="section-title mb-1">Nog invullen ({todo.length})</h3>
+      <p className="mb-3 text-sm text-slate-600">
+        Deze acties zijn tijdens de wedstrijd overgeslagen. Vul de ontbrekende gegevens aan.
+      </p>
+      <ul className="space-y-2">
+        {todo.map((a) => (
+          <li key={a.id} className="rounded-lg border border-amber-300 bg-amber-50 p-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="tabular-nums text-slate-500">{formatClock(a.matchClockMs)}</span>{' '}
+                <strong>{ACTION_META[a.type].label}</strong> · {teamName(a.teamId)} · {who(a)}{' '}
+                <span className="tabular-nums text-slate-500">(stand {standText(scores.get(a.id))})</span>{' '}
+                <span className="rounded bg-amber-200 px-1 text-xs font-semibold">
+                  Nog invullen: {missingFields(a).map((f) => (f === 'speler' && a.type === 'save' ? 'keeper' : TODO_LABEL[f])).join(', ')}
+                </span>
+              </div>
+              <button className="btn" onClick={() => setEditing(editing === a.id ? null : a.id)}>
+                {editing === a.id ? 'Sluiten' : 'Aanvullen'}
+              </button>
+            </div>
+            {editing === a.id && (
+              <div className="mt-2">
+                <ActionEditor action={a} match={match} players={players} onClose={() => setEditing(null)} />
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
 
 /** Free notes about the match: an editor on screen, plain text on paper. */
 export function MatchNotes({ match }: { match: Match }) {
@@ -41,8 +101,10 @@ export function ShotsSection({
   actions: Action[]
   players: Player[]
   teamName: (id: string) => string
-  teamIds: string[]
+  /** [home, away] */
+  teamIds: [string, string]
 }) {
+  const scores = runningScores(actions, teamIds[0], teamIds[1])
   const [team, setTeam] = useState('all')
   const [onlyGoals, setOnlyGoals] = useState(false)
   const shots = actions
@@ -80,6 +142,7 @@ export function ShotsSection({
           action={a}
           players={players.filter((p) => p.teamId === a.teamId)}
           detail={hasShotDetail(a)}
+          stand={standText(scores.get(a.id))}
         />
       ))}
     </section>

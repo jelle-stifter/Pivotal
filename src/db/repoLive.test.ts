@@ -165,3 +165,34 @@ describe('team staff and short name', () => {
     })
   })
 })
+
+describe('skipped fields and timeouts', () => {
+  it('saves an action without player, keeps the keeper empty and the todo mark', async () => {
+    const s = await setup()
+    const a = await repo.logAction({
+      matchId: s.m.id,
+      teamId: s.a.id,
+      playerId: '',
+      type: 'goal',
+      todo: ['speler', 'keeper'],
+    })
+    const stored = await db.actions.get(a.id)
+    expect(stored).toMatchObject({ playerId: '', todo: ['speler', 'keeper'] })
+    expect(stored?.goalkeeperId).toBeUndefined()
+  })
+  it('filling in the skipped fields works through updateAction (position and shooter too)', async () => {
+    const s = await setup()
+    const a = await repo.logAction({ matchId: s.m.id, teamId: s.h.id, playerId: '', type: 'save', todo: ['speler', 'schutter'] })
+    await repo.updateAction(a.id, { playerId: s.hp.id, shooterId: 'o9', position: 'LO' })
+    expect(await db.actions.get(a.id)).toMatchObject({ playerId: s.hp.id, shooterId: 'o9', position: 'LO' })
+  })
+  it('records timeouts per team with the clock moment', async () => {
+    const s = await setup()
+    await repo.addTimeout(s.m.id, { teamId: s.h.id, clockMs: 61_000, period: 1 })
+    await repo.addTimeout(s.m.id, { teamId: s.a.id, clockMs: 90_000, period: 1 })
+    await repo.addTimeout(s.m.id, { teamId: s.h.id, clockMs: 120_000, period: 1 })
+    const m = await db.matches.get(s.m.id)
+    expect(m?.timeouts?.filter((t) => t.teamId === s.h.id)).toHaveLength(2)
+    expect(m?.timeouts?.[1]).toEqual({ teamId: s.a.id, clockMs: 90_000, period: 1 })
+  })
+})

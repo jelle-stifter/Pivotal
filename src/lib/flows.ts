@@ -1,4 +1,7 @@
-import type { Action, ActionType, PositionCode } from '../types'
+import type { Action, ActionType, PositionCode, TodoField } from '../types'
+
+/** Answer value for "skip, fill in after the match". */
+export const TODO_ANSWER = '?'
 
 /** What the live screen starts. `side` is seen from our own team (HVM). */
 export type FlowSpec =
@@ -78,7 +81,10 @@ export function stepsFor(spec: FlowSpec, a: Answers): Step[] {
         },
       ]
     case 'save':
-      return [{ key: 'keeper', title: 'Welke keeper stopte?', kind: 'ownKeeper' }]
+      return [
+        { key: 'keeper', title: 'Welke keeper stopte?', kind: 'ownKeeper' },
+        { key: 'shooter', title: 'Welke tegenstander schoot?', kind: 'oppPlayer' },
+      ]
     case 'card':
       return [
         { key: 'team', title: 'Welk team?', kind: 'team' },
@@ -168,6 +174,8 @@ export type ActionDraft = Pick<Action, 'matchId' | 'teamId' | 'playerId' | 'type
       | 'rebound'
       | 'groupId'
       | 'goalkeeperId'
+      | 'shooterId'
+      | 'todo'
     >
   >
 
@@ -185,6 +193,14 @@ const REBOUND_TYPE: Record<string, ActionType> = {
 const pos = (v: string | undefined): PositionCode | undefined =>
   v ? (v as PositionCode) : undefined
 
+const skipped = (v: string | undefined) => v === TODO_ANSWER
+/** The chosen id, or empty when it was skipped. */
+const id = (v: string | undefined) => (v && !skipped(v) ? v : '')
+const todo = (...list: [boolean, TodoField][]): TodoField[] | undefined => {
+  const t = list.filter(([on]) => on).map(([, f]) => f)
+  return t.length > 0 ? t : undefined
+}
+
 /** Turns finished answers into the actions to save (all share one groupId). */
 export function buildActions(spec: FlowSpec, a: Answers, ctx: FlowContext): ActionDraft[] {
   const base = { matchId: ctx.matchId, groupId: ctx.groupId }
@@ -197,66 +213,89 @@ export function buildActions(spec: FlowSpec, a: Answers, ctx: FlowContext): Acti
             {
               ...base,
               teamId: ctx.ownTeamId,
-              playerId: a.player,
+              playerId: id(a.player),
               type: 'goal',
               position: pos(a.position),
               assistId: a.assist || undefined,
+              todo: todo([skipped(a.player), 'speler']),
             },
           ]
         : [
             {
               ...base,
               teamId: ctx.oppTeamId,
-              playerId: a.player,
+              playerId: id(a.player),
               type: 'goal',
               position: pos(a.position),
-              goalkeeperId: a.keeper || undefined,
+              goalkeeperId: id(a.keeper) || undefined,
+              todo: todo([skipped(a.player), 'speler'], [skipped(a.keeper), 'keeper']),
             },
           ]
     case 'single':
-      return [{ ...base, teamId: team(spec.side), playerId: a.player, type: spec.type }]
+      return [
+        {
+          ...base,
+          teamId: team(spec.side),
+          playerId: id(a.player),
+          type: spec.type,
+          todo: todo([skipped(a.player), 'speler']),
+        },
+      ]
     case 'save':
-      return [{ ...base, teamId: ctx.ownTeamId, playerId: a.keeper, type: 'save' }]
+      return [
+        {
+          ...base,
+          teamId: ctx.ownTeamId,
+          playerId: id(a.keeper),
+          type: 'save',
+          shooterId: id(a.shooter) || undefined,
+          todo: todo([skipped(a.keeper), 'speler'], [skipped(a.shooter), 'schutter']),
+        },
+      ]
     case 'card': {
       const t = team(a.team === 'opp' ? 'opp' : 'own')
       const isStaff = a.person.startsWith('s:')
-      const id = a.person.slice(2)
+      const pid = skipped(a.person) ? '' : a.person.slice(2)
       return [
         {
           ...base,
           teamId: t,
-          playerId: isStaff ? '' : id,
-          staffId: isStaff ? id : undefined,
+          playerId: isStaff ? '' : pid,
+          staffId: isStaff ? pid : undefined,
           type: spec.type,
+          todo: todo([skipped(a.person), 'speler']),
         },
       ]
     }
     case 'penalty': {
       const own = spec.side === 'own'
       const shooterTeam = team(spec.side)
-      // Goals against: the chosen keeper, else the keeper on court.
-      const keeper = own ? undefined : a.keeper || ctx.ownGoalkeeperId
+      // Goals against: the chosen keeper, else the keeper on court (unless skipped).
+      const keeper = own ? undefined : skipped(a.keeper) ? undefined : a.keeper || ctx.ownGoalkeeperId
+      const keeperTodo = !own && skipped(a.keeper)
       const out: ActionDraft[] = [
         {
           ...base,
           teamId: shooterTeam,
-          playerId: a.taker,
+          playerId: id(a.taker),
           type: PENALTY_TYPE[a.outcome],
-          fouledId: a.fouled || undefined,
-          foulerId: a.fouler || undefined,
+          fouledId: id(a.fouled) || undefined,
+          foulerId: id(a.fouler) || undefined,
           position: a.outcome === 'goal' ? 'P' : undefined,
           goalkeeperId: keeper,
+          todo: todo([skipped(a.taker), 'speler'], [keeperTodo, 'keeper']),
         },
       ]
       if (a.outcome === 'stop' && a.after === 'rebound' && a.shooter) {
         out.push({
           ...base,
           teamId: shooterTeam,
-          playerId: a.shooter,
+          playerId: id(a.shooter),
           type: REBOUND_TYPE[a.outcome2],
           rebound: true,
           position: a.outcome2 === 'goal' ? pos(a.position2) : undefined,
           goalkeeperId: keeper,
+          todo: todo([skipped(a.shooter), 'speler'], [keeperTodo, 'keeper']),
         })
       }
       return out

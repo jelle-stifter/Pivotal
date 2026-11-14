@@ -55,6 +55,16 @@ export type Side = 'home' | 'away'
 /** Court position of a goal (dropdown on the live screen). */
 export type PositionCode = 'LH' | 'RH' | 'LO' | 'RO' | 'M' | 'C' | 'K' | 'CC' | 'Br' | 'P'
 
+/** Fields that can be skipped during the match and filled in afterwards. */
+export type TodoField = 'speler' | 'keeper' | 'schutter'
+
+export interface Timeout {
+  teamId: string
+  /** Game clock (ms) when the timeout was taken. */
+  clockMs: number
+  period: number
+}
+
 export type AbsenceReason = 'afwezig' | 'blessure' | 'niet_in_selectie'
 
 export interface StaffMember {
@@ -121,6 +131,8 @@ export interface Match {
    * other screens (or reloads the app).
    */
   clockStartedAt?: number
+  /** Timeouts per team with the clock moment (for the report only). */
+  timeouts?: Timeout[]
   /** Online account (user id) that may score this match; set by a coach. */
   scorerId?: string
   /** Who is scoring right now (advisory lock, so two people do not clash). */
@@ -170,6 +182,10 @@ export interface Action {
   path?: { x: number; y: number }[]
   /** Post-match report: free note on this action. */
   note?: string
+  /** Opponent who took the shot that our keeper stopped. */
+  shooterId?: string
+  /** Skipped during the match ("Nog invullen"); see missingFields(). */
+  todo?: TodoField[]
   /** True for the shot after a stopped penalty (rebound). */
   rebound?: boolean
   /** Actions that were logged in one flow share this id (undo removes all). */

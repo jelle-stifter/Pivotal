@@ -182,3 +182,56 @@ describe('going back', () => {
     expect(nextStep(spec, { player: 'p7', position: 'M', assist: '' })).toBeNull()
   })
 })
+
+import { TODO_ANSWER } from './flows'
+
+describe('skip: fill in after the match', () => {
+  it('saves a goal against without scorer or keeper, marked as todo (keeper is not guessed)', () => {
+    const [a] = buildActions({ kind: 'goal', side: 'opp' }, { keeper: TODO_ANSWER, player: TODO_ANSWER, position: 'LH' }, ctx)
+    expect(a).toMatchObject({ teamId: 'EHV', playerId: '', type: 'goal', position: 'LH', todo: ['speler', 'keeper'] })
+    expect(a.goalkeeperId).toBeUndefined()
+  })
+  it('saves an own goal without scorer; a chosen player leaves no todo', () => {
+    const spec: FlowSpec = { kind: 'goal', side: 'own' }
+    expect(buildActions(spec, { player: TODO_ANSWER, position: 'M', assist: '' }, ctx)[0]).toMatchObject({
+      playerId: '',
+      todo: ['speler'],
+    })
+    expect(buildActions(spec, { player: 'p7', position: 'M', assist: '' }, ctx)[0].todo).toBeUndefined()
+  })
+  it('skips work for single actions, penalties and cards', () => {
+    expect(buildActions({ kind: 'single', side: 'own', type: 'shot' }, { player: TODO_ANSWER }, ctx)[0]).toMatchObject({
+      playerId: '',
+      todo: ['speler'],
+    })
+    const pen = buildActions(
+      { kind: 'penalty', side: 'opp' },
+      { fouled: TODO_ANSWER, fouler: 'p4', taker: TODO_ANSWER, outcome: 'goal', keeper: TODO_ANSWER },
+      ctx,
+    )[0]
+    expect(pen).toMatchObject({ playerId: '', type: 'penalty_goal', todo: ['speler', 'keeper'] })
+    expect(pen.goalkeeperId).toBeUndefined()
+    expect(pen.fouledId).toBeUndefined()
+    expect(
+      buildActions({ kind: 'card', type: 'yellow_card' }, { team: 'own', person: TODO_ANSWER }, ctx)[0],
+    ).toMatchObject({ playerId: '', todo: ['speler'] })
+  })
+})
+
+describe('stop (opponent shoots, our keeper stops)', () => {
+  const spec: FlowSpec = { kind: 'save' }
+  it('asks the keeper and then which opponent shot', () => {
+    expect(walk(spec, { keeper: 'gk1', shooter: 'o7' })).toEqual(['keeper', 'shooter'])
+    expect(nextStep(spec, { keeper: 'gk1' })!.kind).toBe('oppPlayer')
+  })
+  it('stores the shooter; skipping marks it as todo', () => {
+    expect(buildActions(spec, { keeper: 'gk1', shooter: 'o7' }, ctx)[0]).toMatchObject({
+      type: 'save',
+      playerId: 'gk1',
+      shooterId: 'o7',
+    })
+    const skipped = buildActions(spec, { keeper: 'gk1', shooter: TODO_ANSWER }, ctx)[0]
+    expect(skipped.shooterId).toBeUndefined()
+    expect(skipped.todo).toEqual(['schutter'])
+  })
+})

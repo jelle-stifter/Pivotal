@@ -1,6 +1,5 @@
 import { formatPenaltyTimes, type ActivePenalty } from '../../lib/clock'
 import type { ScorerRow } from '../../lib/live'
-import { positionLabel } from '../../lib/positions'
 import type { Player, Team } from '../../types'
 
 function ScorerList({
@@ -43,7 +42,7 @@ function ScorerList({
                   </span>
                 </div>
                 {r.topPosition && (
-                  <div className="text-xs text-white/55">{positionLabel(r.topPosition)}</div>
+                  <div className="text-xs text-white/55">{r.topPosition}</div>
                 )}
               </li>
             )

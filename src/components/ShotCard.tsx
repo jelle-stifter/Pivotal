@@ -15,8 +15,11 @@ export default function ShotCard({
   action,
   players,
   detail,
+  stand,
 }: {
   action: Action
+  /** Running score right after this action, e.g. "5–4". */
+  stand?: string
   players: Player[] // players of the shooting team
   /** True when something (cell, bounce, line, note) is filled in. */
   detail: boolean
@@ -34,7 +37,7 @@ export default function ShotCard({
 
   const who = (id: string) => {
     const p = players.find((x) => x.id === id)
-    return p ? `#${p.number} ${p.name}` : '?'
+    return p ? `#${p.number} ${p.name}` : 'Nog invullen'
   }
 
   function open() {
@@ -73,6 +76,7 @@ export default function ShotCard({
       <div className="font-semibold">
         <span className="tabular-nums text-slate-500">{formatClock(action.matchClockMs)}</span>{' '}
         {who(action.playerId)} · {ACTION_META[action.type].label}
+        {stand && <span className="font-normal text-slate-600"> · stand {stand}</span>}
         {action.goalCell !== undefined && (
           <span className="font-normal text-slate-600"> · {CELL_NAMES[action.goalCell]}</span>
         )}
@@ -121,6 +125,7 @@ export default function ShotCard({
         <label className="label">
           Speler
           <select className="field" value={playerId} onChange={(e) => setPlayerId(e.target.value)}>
+            <option value="">Nog invullen</option>
             {players.map((p) => (
               <option key={p.id} value={p.id}>
                 #{p.number} {p.name}

@@ -33,6 +33,7 @@ import { formatClock } from '../lib/time'
 import FlowSheet from '../components/live/FlowSheet'
 import MatchPrep from '../components/MatchPrep'
 import { PenaltyList, ScorersPanel } from '../components/live/LivePanels'
+import LiveHistory from '../components/live/LiveHistory'
 import StatsPage from './StatsPage'
 import type { Action, ActionType, Match, Player, Side, Team } from '../types'
 
@@ -379,15 +380,37 @@ function LiveScreen({
     )
   }
 
+  /** Timeout: the clock stops (by hand it starts again); only counted for the report. */
+  async function timeout(side: Side) {
+    if (finished) return
+    const ms = Math.round(capGameMs(clock.get(), period))
+    clock.release()
+    if (clock.running) await repo.updateMatch(match.id, { clockMs: ms, clockStartedAt: undefined })
+    await repo.addTimeout(match.id, { teamId: sideTeamId(side), clockMs: ms, period })
+    flash(`Timeout ${shortName(teamOf(sideTeamId(side)))}. Druk op Start om verder te gaan.`)
+  }
+
   const penalties = activePenalties(actions, gameMs)
   const sideHeader = (side: Side) => {
     const t = teamOf(sideTeamId(side))
     const color = sideColor(side)
+    const count = (match.timeouts ?? []).filter((x) => x.teamId === sideTeamId(side)).length
     return (
       <div className="flex items-center gap-2 text-sm font-bold">
-        <span aria-hidden className="inline-block h-3 w-3 rounded-full" style={{ background: color }} />
-        <span className="truncate">
+        <span aria-hidden className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: color }} />
+        <span className="min-w-0 flex-1 truncate">
           {t?.name ?? '?'} <span className="font-normal text-white/60">· {side === 'home' ? 'Thuis' : 'Uit'}</span>
+        </span>
+        <button
+          type="button"
+          onClick={() => void timeout(side)}
+          disabled={finished}
+          className="min-h-11 shrink-0 rounded-lg border border-white/30 px-3 text-sm font-bold hover:bg-white/10 disabled:opacity-40"
+        >
+          Timeout
+        </button>
+        <span className="w-4 text-xs tabular-nums text-white/60" aria-label={`Timeouts: ${count}`}>
+          {count}
         </span>
       </div>
     )
@@ -400,7 +423,15 @@ function LiveScreen({
       className="fixed inset-x-0 bottom-0 top-14 z-10 overflow-y-auto text-white"
       style={{ background: '#2a2c30', fontFamily: 'system-ui, sans-serif' }}
     >
-      <div className="mx-auto grid min-h-full max-w-[1440px] gap-3 p-3 lg:h-full lg:grid-cols-[1fr_17rem_1fr_16rem] lg:grid-rows-[1fr_auto]">
+      <div className="mx-auto grid min-h-full max-w-[1440px] gap-3 p-3 lg:h-full lg:grid-cols-[13rem_1fr_17rem_1fr_15rem] lg:grid-rows-[1fr_auto]">
+        {/* Far left: history of the actions */}
+        <LiveHistory
+          match={match}
+          actions={actions}
+          players={players}
+          colorOf={(id) => (id === match.homeTeamId ? homeColor : awayColor)}
+        />
+
         {/* Left: clock and the buttons of our own team */}
         <div className="flex min-h-0 flex-col gap-3">
           <div className="flex items-stretch gap-3">
@@ -432,12 +463,17 @@ function LiveScreen({
         <div className="flex min-h-0 flex-col gap-3">
           <section className="rounded-2xl bg-black/30 p-3 text-center" aria-label="Stand">
             <h2 className="text-xs font-bold uppercase tracking-widest text-white/60">Stand</h2>
-            <div className="mt-1 flex items-center justify-center gap-2 text-4xl font-extrabold tabular-nums">
-              <span style={{ color: sideColor(leftSide) }}>{shortName(teamOf(sideTeamId(leftSide)))}</span>
-              <span>{result[leftSide]}</span>
-              <span className="text-white/40">|</span>
-              <span>{result[rightSide]}</span>
-              <span style={{ color: sideColor(rightSide) }}>{shortName(teamOf(sideTeamId(rightSide)))}</span>
+            <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-x-2">
+              <span className="truncate text-lg font-extrabold" style={{ color: sideColor(leftSide) }}>
+                {shortName(teamOf(sideTeamId(leftSide)))}
+              </span>
+              <span />
+              <span className="truncate text-lg font-extrabold" style={{ color: sideColor(rightSide) }}>
+                {shortName(teamOf(sideTeamId(rightSide)))}
+              </span>
+              <span className="text-6xl font-extrabold tabular-nums leading-none">{result[leftSide]}</span>
+              <span className="text-3xl text-white/40">|</span>
+              <span className="text-6xl font-extrabold tabular-nums leading-none">{result[rightSide]}</span>
             </div>
             <div className="mt-1 flex justify-between text-xs text-white/60">
               <span>{leftSide === 'home' ? 'Thuis' : 'Uit'}</span>
@@ -479,6 +515,14 @@ function LiveScreen({
             </button>
           </div>
 
+          <button
+            type="button"
+            onClick={() => void undo()}
+            className="min-h-14 rounded-xl border border-white/30 px-3 text-base font-bold hover:bg-white/10"
+          >
+            Ongedaan maken
+          </button>
+
           <PenaltyList
             penalties={penalties}
             players={players}
@@ -497,19 +541,10 @@ function LiveScreen({
           )}
         </div>
 
-        {/* Right: the opponent, with undo next to its team name */}
+        {/* Right: the opponent, same layout as the left side */}
         <div className="flex min-h-0 flex-col gap-3">
-          <div className="flex min-h-[88px] items-center justify-between gap-2 rounded-2xl bg-black/25 px-3">
-            {sideHeader(rightSide)}
-            <button
-              type="button"
-              onClick={() => void undo()}
-              className="min-h-11 shrink-0 rounded-lg border border-white/30 px-3 text-sm font-bold hover:bg-white/10"
-            >
-              Ongedaan maken
-            </button>
-          </div>
-          <div className="h-5" aria-hidden />
+          <div className="min-h-[88px]" aria-hidden />
+          {sideHeader(rightSide)}
           <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
             {sideButtons(false, sideColor(rightSide))}
           </div>
