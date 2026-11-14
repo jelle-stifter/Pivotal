@@ -56,7 +56,7 @@ export type Side = 'home' | 'away'
 export type PositionCode = 'LH' | 'RH' | 'LO' | 'RO' | 'M' | 'C' | 'K' | 'CC' | 'Br' | 'P'
 
 /** Fields that can be skipped during the match and filled in afterwards. */
-export type TodoField = 'speler' | 'keeper' | 'schutter'
+export type TodoField = 'speler' | 'keeper' | 'schutter' | 'assist'
 
 export interface Timeout {
   teamId: string

@@ -216,8 +216,8 @@ export function buildActions(spec: FlowSpec, a: Answers, ctx: FlowContext): Acti
               playerId: id(a.player),
               type: 'goal',
               position: pos(a.position),
-              assistId: a.assist || undefined,
-              todo: todo([skipped(a.player), 'speler']),
+              assistId: id(a.assist) || undefined,
+              todo: todo([skipped(a.player), 'speler'], [skipped(a.assist), 'assist']),
             },
           ]
         : [

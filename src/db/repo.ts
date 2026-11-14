@@ -276,6 +276,8 @@ export function createRepo(db: PivotalDB = defaultDb) {
           | 'goalkeeperId'
           | 'position'
           | 'shooterId'
+          | 'assistId'
+          | 'todo'
           | 'x'
           | 'y'
           | 'bounce'

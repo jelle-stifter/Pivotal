@@ -270,7 +270,7 @@ export default function FlowSheet({
             onPick={answer}
             onSkip={s.optional ? () => answer('') : undefined}
             skipLabel="Geen assist"
-            onTodo={s.optional ? undefined : () => answer(TODO_ANSWER)}
+            onTodo={() => answer(TODO_ANSWER)}
           />
         )
       }

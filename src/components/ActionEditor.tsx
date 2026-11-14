@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { repo } from '../db/repo'
 import { ACTION_META, KEEPER_FACED_TYPES } from '../lib/actions'
 import { POSITIONS } from '../lib/positions'
+import { ownTeamId } from '../lib/ownTeam'
 import { ACTION_TYPES, type Action, type ActionType, type Match, type PositionCode, type Player } from '../types'
 
 const POSITION_TYPES: ActionType[] = ['goal', 'penalty_goal', 'shot', 'off_target']
@@ -28,6 +29,10 @@ export default function ActionEditor({
   const [playerId, setPlayerId] = useState(action.playerId)
   const [keeperId, setKeeperId] = useState(action.goalkeeperId ?? '')
   const [shooterId, setShooterId] = useState(action.shooterId ?? '')
+  // '' = still to fill in, '-' = no assist, else the player who gave it.
+  const [assist, setAssist] = useState(
+    action.assistId ?? (action.todo?.includes('assist') ? '' : '-'),
+  )
   const [position, setPosition] = useState<PositionCode | ''>(action.position ?? '')
   const [error, setError] = useState('')
 
@@ -37,6 +42,10 @@ export default function ActionEditor({
   const label = (p: Player) => `#${p.number} ${p.name}`
   const faced = KEEPER_FACED_TYPES.includes(type)
   const isStaff = Boolean(action.staffId)
+  // Only goals of our own team have an assist (unless one is stored or was skipped).
+  const hasAssist =
+    type === 'goal' &&
+    (action.teamId === ownTeamId(match) || Boolean(action.assistId) || Boolean(action.todo?.includes('assist')))
 
   async function save() {
     try {
@@ -46,6 +55,15 @@ export default function ActionEditor({
         ...(faced ? { goalkeeperId: keeperId } : {}),
         ...(action.type === 'save' ? { shooterId: shooterId || undefined } : {}),
         ...(POSITION_TYPES.includes(type) && position ? { position } : {}),
+        ...(hasAssist
+          ? {
+              assistId: assist === '' || assist === '-' ? undefined : assist,
+              // Choosing "Geen assist" or a player ends the "nog invullen" of the assist.
+              todo: ((action.todo ?? []).filter((f) => f !== 'assist' || assist === '').length > 0
+                ? (action.todo ?? []).filter((f) => f !== 'assist' || assist === '')
+                : undefined),
+            }
+          : {}),
       })
       onClose()
     } catch (e) {
@@ -117,6 +135,22 @@ export default function ActionEditor({
                   {label(p)}
                 </option>
               ))}
+            </select>
+          </label>
+        )}
+        {hasAssist && (
+          <label className={lbl}>
+            Assist
+            <select className={field} value={assist} onChange={(e) => setAssist(e.target.value)}>
+              <option value="">Nog invullen</option>
+              <option value="-">Geen assist</option>
+              {mine
+                .filter((p) => p.id !== playerId)
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {label(p)}
+                  </option>
+                ))}
             </select>
           </label>
         )}

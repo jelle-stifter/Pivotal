@@ -98,8 +98,7 @@ export default function ShotCard({
       <article className={`card ${detail ? '' : 'no-print'}`}>
         {head}
         {detail && (
-          <div className="mx-auto mt-3 w-full max-w-[22rem]">
-            <GoalGrid value={action.goalCell} label="Doel, gezien vanuit de schutter" />
+          <div className="mt-3 grid items-start gap-4 sm:grid-cols-[minmax(0,26rem)_14rem]">
             <HalfCourt
               shooter={hasPosition(action) ? { x: action.x, y: action.y } : null}
               bounce={action.bounce}
@@ -107,7 +106,10 @@ export default function ShotCard({
               path={action.path}
               label="Baltraject"
             />
-            {action.note && <p className="mt-2 whitespace-pre-wrap text-sm">{action.note}</p>}
+            <div>
+              <GoalGrid value={action.goalCell} label="Doel, gezien vanuit de schutter" />
+              {action.note && <p className="mt-2 whitespace-pre-wrap text-sm">{action.note}</p>}
+            </div>
           </div>
         )}
       </article>
@@ -145,7 +147,8 @@ export default function ShotCard({
         </label>
       </div>
 
-      <div className="mx-auto mt-3 w-full max-w-[22rem] space-y-2">
+      <div className="mt-3 grid items-start gap-4 sm:grid-cols-[minmax(0,26rem)_14rem]">
+        <div className="space-y-2">
         <div className="segmented" role="group" aria-label="Wat teken je">
           {modes.map(([m, text]) => (
             <button
@@ -159,23 +162,17 @@ export default function ShotCard({
             </button>
           ))}
         </div>
-        <div>
-          <div className="mb-1 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Doel (vanuit de schutter)
-          </div>
-          <GoalGrid value={cell} onPick={setCell} label="Kies het vak waar de bal in het doel ging" />
-          <HalfCourt
-            shooter={shooter}
-            bounce={bounce}
-            goalCell={cell}
-            path={path}
-            mode={mode}
-            onShooter={setShooter}
-            onBounce={setBounce}
-            onPath={setPath}
-            label="Halve veld: tik de schietpositie, de stuit of teken het baltraject"
-          />
-        </div>
+        <HalfCourt
+          shooter={shooter}
+          bounce={bounce}
+          goalCell={cell}
+          path={path}
+          mode={mode}
+          onShooter={setShooter}
+          onBounce={setBounce}
+          onPath={setPath}
+          label="Halve veld: tik de schietpositie, de stuit of teken het baltraject"
+        />
         <div className="flex flex-wrap gap-2 text-sm">
           <button className="btn" onClick={() => setShooter(null)} disabled={!shooter}>
             Wis schietpositie
@@ -186,6 +183,13 @@ export default function ShotCard({
           <button className="btn" onClick={() => setPath([])} disabled={path.length === 0}>
             Wis baltraject
           </button>
+        </div>
+        </div>
+        <div className="space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Doel (vanuit de schutter)
+          </div>
+          <GoalGrid value={cell} onPick={setCell} label="Kies het vak waar de bal in het doel ging" />
         </div>
       </div>
 

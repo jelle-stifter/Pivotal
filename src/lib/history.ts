@@ -5,15 +5,24 @@ export const TODO_LABEL: Record<TodoField, string> = {
   speler: 'speler',
   keeper: 'keeper',
   schutter: 'schutter',
+  assist: 'assist',
 }
 
 /**
  * Fields that were skipped during the match ("invullen na de wedstrijd") and
  * are still empty. Filling them in (live history or report) clears the mark.
  */
-export function missingFields(a: Pick<Action, 'todo' | 'playerId' | 'staffId' | 'goalkeeperId' | 'shooterId'>): TodoField[] {
+export function missingFields(
+  a: Pick<Action, 'todo' | 'playerId' | 'staffId' | 'goalkeeperId' | 'shooterId' | 'assistId'>,
+): TodoField[] {
   return (a.todo ?? []).filter((f) =>
-    f === 'speler' ? !a.playerId && !a.staffId : f === 'keeper' ? !a.goalkeeperId : !a.shooterId,
+    f === 'speler'
+      ? !a.playerId && !a.staffId
+      : f === 'keeper'
+        ? !a.goalkeeperId
+        : f === 'assist'
+          ? !a.assistId
+          : !a.shooterId,
   )
 }
 

@@ -235,3 +235,19 @@ describe('stop (opponent shoots, our keeper stops)', () => {
     expect(skipped.todo).toEqual(['schutter'])
   })
 })
+
+describe('skip the assist', () => {
+  const spec: FlowSpec = { kind: 'goal', side: 'own' }
+  it('stores no assist and marks it as todo; "Geen assist" stays without a mark', () => {
+    const skipped = buildActions(spec, { player: 'p7', position: 'LH', assist: TODO_ANSWER }, ctx)[0]
+    expect(skipped.assistId).toBeUndefined()
+    expect(skipped.todo).toEqual(['assist'])
+    expect(buildActions(spec, { player: 'p7', position: 'LH', assist: '' }, ctx)[0].todo).toBeUndefined()
+  })
+  it('combines with a skipped scorer', () => {
+    expect(buildActions(spec, { player: TODO_ANSWER, position: 'LH', assist: TODO_ANSWER }, ctx)[0].todo).toEqual([
+      'speler',
+      'assist',
+    ])
+  })
+})

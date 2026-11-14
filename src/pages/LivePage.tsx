@@ -348,14 +348,14 @@ function LiveScreen({
             <div className="mb-1 px-1 text-xs font-bold uppercase tracking-wide text-white/60">
               Fouten last
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <PadButton color="#4b5563" className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'bad_pass'))}>
                 Pass fout
               </PadButton>
               <PadButton color="#4b5563" className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'technical_foul'))}>
                 Technische fout
               </PadButton>
-              <PadButton color="#4b5563" className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'interception'))}>
+              <PadButton color="#4b5563" className="col-span-2 !text-xs sm:!text-sm" onClick={() => start(single('own', 'interception'))}>
                 Onderschepping
               </PadButton>
             </div>
@@ -437,25 +437,16 @@ function LiveScreen({
 
         {/* Left: clock and the buttons of our own team */}
         <div className="flex min-h-0 flex-col gap-3">
-          <div className="flex items-stretch gap-3">
-            <button
-              type="button"
-              onClick={toggleClock}
-              disabled={finished}
-              aria-label={clock.running ? 'Stop de klok' : 'Start de klok'}
-              style={{ background: clock.running ? '#dc2626' : '#16a34a' }}
-              className="min-h-[88px] min-w-[7.5rem] rounded-2xl px-4 text-2xl font-extrabold shadow-md transition active:scale-[0.97] disabled:opacity-40"
-            >
-              {clock.running ? 'Stop' : 'Start'}
-            </button>
-            <div
-              className="flex flex-1 items-center justify-center rounded-2xl bg-black/30 px-3 text-5xl font-bold tabular-nums sm:text-6xl"
-              aria-label="Wedstrijdklok"
-              role="timer"
-            >
-              {formatClock(countdownMs(clock.ms, period))}
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={toggleClock}
+            disabled={finished}
+            aria-label={clock.running ? 'Stop de klok' : 'Start de klok'}
+            style={{ background: clock.running ? '#dc2626' : '#16a34a' }}
+            className="h-[88px] w-full shrink-0 rounded-2xl px-4 text-3xl font-extrabold shadow-md transition active:scale-[0.97] disabled:opacity-40"
+          >
+            {clock.running ? 'Stop' : 'Start'}
+          </button>
           {sideHeader(leftSide)}
           <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
             {sideButtons(true, sideColor(leftSide))}
@@ -552,7 +543,13 @@ function LiveScreen({
 
         {/* Right: the opponent, same layout as the left side */}
         <div className="flex min-h-0 flex-col gap-3">
-          <div className="min-h-[88px]" aria-hidden />
+          <div
+            className="flex h-[88px] shrink-0 items-center justify-center rounded-2xl bg-black/30 px-3 text-5xl font-bold tabular-nums sm:text-6xl"
+            aria-label="Wedstrijdklok"
+            role="timer"
+          >
+            {formatClock(countdownMs(clock.ms, period))}
+          </div>
           {sideHeader(rightSide)}
           <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
             {sideButtons(false, sideColor(rightSide))}
