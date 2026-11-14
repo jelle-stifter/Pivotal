@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { missingFields } from './history'
 import { buildDemo, DEMO_MATCH_ID } from './demo'
 import { hasPosition } from './court'
 import { KEEPER_FACED_TYPES } from './actions'
@@ -141,5 +142,50 @@ describe('buildDemo', () => {
     const goals = demo.actions.filter((a) => a.type === 'goal')
     const mean = goals.reduce((s, g) => s + g.x!, 0) / goals.length
     expect(mean).toBeGreaterThan(0.7)
+  })
+})
+
+describe('demo: shows the newest features', () => {
+  const d = buildDemo('2026-11-08', 1_000)
+
+  it('gives HVM staff, a short name and normalized positions (code + full name)', () => {
+    const hvm = d.teams.find((t) => t.id === 'demo-home')!
+    expect(hvm.shortName).toBe('HVM')
+    expect(hvm.staff?.length).toBeGreaterThan(0)
+    const lw = d.players.find((p) => p.id === 'demo-demo-home-2')!
+    expect(lw).toMatchObject({ position: 'Links Hoek', positionCode: 'LH' })
+    expect(d.players.find((p) => p.id === 'demo-demo-home-1')).toMatchObject({ positionCode: 'K' })
+  })
+
+  it('chooses team colours per match: HVM always blue, the opponent red', () => {
+    for (const m of d.matches) {
+      const hvmIsHome = m.homeTeamId === 'demo-home'
+      expect(hvmIsHome ? m.homeColor : m.awayColor).toBe('#2563eb')
+      expect(hvmIsHome ? m.awayColor : m.homeColor).toBe('#dc2626')
+    }
+  })
+
+  it('has timeouts for both teams and a top 3 of penalty takers that exist', () => {
+    const m = d.match
+    expect(m.timeouts?.filter((t) => t.teamId === 'demo-home')).toHaveLength(2)
+    expect(m.timeouts?.filter((t) => t.teamId === 'demo-away')).toHaveLength(1)
+    const ids = new Set(d.players.map((p) => p.id))
+    expect(m.penaltyTakers).toHaveLength(3)
+    for (const id of m.penaltyTakers!) expect(ids.has(id)).toBe(true)
+  })
+
+  it('stores position codes on goals and shots, "P" on 7m goals, and the shooter on stops', () => {
+    const goals = d.actions.filter((a) => a.type === 'goal' && a.position)
+    expect(goals.length).toBeGreaterThan(50)
+    expect(d.actions.filter((a) => a.type === 'penalty_goal').every((a) => a.position === 'P')).toBe(true)
+    const saves = d.actions.filter((a) => a.type === 'save')
+    expect(saves.every((a) => a.shooterId && a.shooterId !== a.playerId)).toBe(true)
+  })
+
+  it('has a few actions that still say "Nog invullen" in the newest match only', () => {
+    const todo = d.actions.filter((a) => a.todo?.length)
+    expect(todo.length).toBe(3)
+    expect(todo.every((a) => a.matchId === 'demo-match')).toBe(true)
+    expect(missingFields(todo[0]).length + missingFields(todo[1]).length + missingFields(todo[2]).length).toBe(3)
   })
 })

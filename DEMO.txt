@@ -10,6 +10,22 @@ Adres: http://localhost:5173  (of https://backhand.netlify.app)
 HVM is altijd het eigen team.
 
 
+SNELLE DEMO (zonder inloggen, 2 minuten)
+----------------------------------------
+Wedstrijden > Demo laden (onderaan de pagina). Dat zet lokaal klaar:
+- Twee teams: H.V. Margraten DS1 (HVM, met staf Kees en Anouk) en Gasten HC.
+  Elk 8 spelers met positie (afkorting en volledige naam) en een keeper.
+- Vier afgeronde wedstrijden (thuis en uit, een winst, gelijkspel en verlies),
+  elk met teamkleuren (HVM blauw, tegenstander rood), ruim 150 acties met
+  posities, timeouts en de top 3 penaltyschutters.
+- In de nieuwste wedstrijd (31 - 27) staan 3 acties op "Nog invullen":
+  twee doelpunten zonder positie en een zonder assist. Open Rapport en klik
+  op Aanvullen.
+Bekijk: Statistieken (twee tabellen, klik een rij), Rapport (Afdrukken geeft
+2 pagina's: voorkant en heatmap), Seizoen en de spelerspagina's.
+Demodata weer weg: Wedstrijden > Demodata verwijderen (eigen data blijft staan).
+
+
 VOORBEREIDING (vooraf, 5 minuten)
 ---------------------------------
 1. Supabase leeg maken: voer supabase/reset_data.sql uit (SQL Editor).

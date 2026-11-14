@@ -4,8 +4,10 @@ import {
   type ActionType,
   type Match,
   type Player,
+  type PositionCode,
   type Team,
 } from '../types'
+import { normalizePosition } from './positions'
 
 /** Small deterministic PRNG so the demo is identical every time. */
 function mulberry32(seed: number) {
@@ -49,6 +51,22 @@ const SHOOT_SPOT: Record<Exclude<Role, 'K'>, { x: number; y: number; sx: number;
   RB: { x: 0.78, y: 0.75, sx: 0.05, sy: 0.07, weight: 4 },
   DEF: { x: 0.7, y: 0.5, sx: 0.06, sy: 0.15, weight: 0.5 },
 }
+
+/** Playing position (code) of each demo role, as the Teams page stores it. */
+const ROLE_POSITION: Record<Role, PositionCode> = {
+  K: 'K',
+  LW: 'LH',
+  RW: 'RH',
+  LB: 'LO',
+  RB: 'RO',
+  CB: 'M',
+  PV: 'C',
+  DEF: 'CC',
+}
+
+/** Our own team (HVM) is blue, the opponent red; the colour follows the team, not the side. */
+const OWN_HEX = '#2563eb'
+const OPPONENT_HEX = '#dc2626'
 
 const HOME_ROSTER: [number, string, Role][] = [
   [1, 'Daan de Vries', 'K'],
@@ -138,8 +156,17 @@ function daysBefore(date: string, n: number): string {
 export function buildDemo(date: string, now: number): DemoData {
   let rng: Rng = mulberry32(MATCHES[0].seed)
   const teams: Team[] = [
-    { id: 'demo-home', name: 'H.V. Margraten DS1', shortName: 'HVM', schemaVersion: SCHEMA_VERSION },
-    { id: 'demo-away', name: 'Gasten HC (demo)', schemaVersion: SCHEMA_VERSION },
+    {
+      id: 'demo-home',
+      name: 'H.V. Margraten DS1',
+      shortName: 'HVM',
+      staff: [
+        { id: 'demo-staff-1', name: 'Kees Koster', role: 'Eerste trainer' },
+        { id: 'demo-staff-2', name: 'Anouk Peeters', role: 'Teammanager' },
+      ],
+      schemaVersion: SCHEMA_VERSION,
+    },
+    { id: 'demo-away', name: 'Gasten HC (demo)', shortName: 'GHC', schemaVersion: SCHEMA_VERSION },
   ]
   const role = new Map<string, Role>()
   const players: Player[] = []
@@ -147,9 +174,11 @@ export function buildDemo(date: string, now: number): DemoData {
     for (const [number, name, r] of roster) {
       const id = `demo-${teamId}-${number}`
       role.set(id, r)
+      const pos = normalizePosition(ROLE_POSITION[r])
       players.push({
         id, teamId, name, number,
-        position: r === 'K' ? 'Keeper' : r,
+        position: pos.ok ? pos.position : '',
+        positionCode: pos.ok ? pos.code : undefined,
         isGoalkeeper: r === 'K',
         schemaVersion: SCHEMA_VERSION,
       })
@@ -170,6 +199,8 @@ export function buildDemo(date: string, now: number): DemoData {
     x: number
     y: number
     goalkeeperId?: string
+    position?: PositionCode
+    shooterId?: string
   }
   const generate = (cfg: MatchCfg, index: number): Action[] => {
   rng = mulberry32(cfg.seed)
@@ -236,11 +267,13 @@ export function buildDemo(date: string, now: number): DemoData {
         let player: Player
         let pos: { x: number; y: number }
         let goalkeeperId: string | undefined
+        let position: PositionCode | undefined
         switch (type) {
           case 'goal':
           case 'shot':
             player = shooter(teamId)
             pos = shotSpot(player)
+            position = ROLE_POSITION[role.get(player.id) as Role]
             if (type === 'goal') goalkeeperId = keeperOf(opp).id
             break
           case 'penalty_goal':
@@ -249,6 +282,7 @@ export function buildDemo(date: string, now: number): DemoData {
             player = shooter(teamId)
             pos = { x: PENALTY_X, y: clamp01(0.5 + gauss(rng) * 0.01) }
             goalkeeperId = keeperOf(opp).id
+            if (type === 'penalty_goal') position = 'P'
             break
           case 'penalty_won':
             player = shooter(teamId)
@@ -270,7 +304,7 @@ export function buildDemo(date: string, now: number): DemoData {
             player = anyone(teamId)
             pos = midCourt()
         }
-        drafts.push({ teamId, playerId: player.id, type, ...pos, goalkeeperId })
+        drafts.push({ teamId, playerId: player.id, type, ...pos, goalkeeperId, position })
       }
     }
   }
@@ -281,6 +315,8 @@ export function buildDemo(date: string, now: number): DemoData {
         teamId, playerId: keeperOf(teamId).id, type: 'save',
         x: clamp01(0.06 + Math.abs(gauss(rng)) * 0.03),
         y: clamp01(0.5 + gauss(rng) * 0.08),
+        // The opponent who took the shot that was stopped (flow "Stop").
+        shooterId: shooter(opponent(teamId)).id,
       })
 
   // Blocks and shots off target (added for the tablet live screen).
@@ -318,6 +354,8 @@ export function buildDemo(date: string, now: number): DemoData {
       schemaVersion: SCHEMA_VERSION,
     }
     if (d.goalkeeperId) a.goalkeeperId = d.goalkeeperId
+    if (d.position) a.position = d.position
+    if (d.shooterId) a.shooterId = d.shooterId
     return a
   })
 
@@ -325,6 +363,16 @@ export function buildDemo(date: string, now: number): DemoData {
   }
 
   const matches: Match[] = MATCHES.map((cfg) => ({
+    // Team colours chosen "when creating the match": HVM blue, the opponent red.
+    homeColor: cfg.home === 'demo-home' ? OWN_HEX : OPPONENT_HEX,
+    awayColor: cfg.away === 'demo-home' ? OWN_HEX : OPPONENT_HEX,
+    // Our top 3 penalty takers (best first) and a few timeouts for the report.
+    penaltyTakers: [4, 9, 7].map((n) => `demo-demo-home-${n}`),
+    timeouts: [
+      { teamId: 'demo-home', clockMs: 14 * 60_000 + 20_000, period: 1 },
+      { teamId: 'demo-away', clockMs: 22 * 60_000 + 5_000, period: 1 },
+      { teamId: 'demo-home', clockMs: 47 * 60_000 + 40_000, period: 2 },
+    ],
     id: cfg.id,
     homeTeamId: cfg.home,
     awayTeamId: cfg.away,
@@ -342,6 +390,17 @@ export function buildDemo(date: string, now: number): DemoData {
     schemaVersion: SCHEMA_VERSION,
   }))
   const actions = MATCHES.flatMap((cfg, i) => generate(cfg, i))
+
+  // Show "Nog invullen" in the newest match: two of our goals without a
+  // position and one without an assist were skipped during the match.
+  const newest = actions.filter(
+    (a) => a.matchId === DEMO_MATCH_ID && a.teamId === 'demo-home' && a.type === 'goal' && a.position,
+  )
+  for (const a of newest.slice(2, 4)) {
+    delete a.position
+    a.todo = ['positie']
+  }
+  if (newest[6]) newest[6].todo = ['assist']
 
   return { teams, players, match: matches[0], matches, actions }
 }
