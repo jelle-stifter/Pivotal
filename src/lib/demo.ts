@@ -64,6 +64,17 @@ const ROLE_POSITION: Record<Role, PositionCode> = {
   DEF: 'CC',
 }
 
+/**
+ * Where shots that reached the goal ended up in the 3x3 goal matrix (cell 0..8,
+ * row by row from the top-left, seen from the shooter). Corners are favourite,
+ * the middle is rare.
+ */
+const GOAL_CELL_WEIGHTS: [number, number][] = [
+  [0, 3], [1, 1.5], [2, 3],
+  [3, 1.5], [4, 0.6], [5, 1.5],
+  [6, 2.5], [7, 1.2], [8, 2.5],
+]
+
 /** Our own team (HVM) is blue, the opponent red; the colour follows the team, not the side. */
 const OWN_HEX = '#2563eb'
 const OPPONENT_HEX = '#dc2626'
@@ -201,6 +212,7 @@ export function buildDemo(date: string, now: number): DemoData {
     goalkeeperId?: string
     position?: PositionCode
     shooterId?: string
+    goalCell?: number
   }
   const generate = (cfg: MatchCfg, index: number): Action[] => {
   rng = mulberry32(cfg.seed)
@@ -304,7 +316,12 @@ export function buildDemo(date: string, now: number): DemoData {
             player = anyone(teamId)
             pos = midCourt()
         }
-        drafts.push({ teamId, playerId: player.id, type, ...pos, goalkeeperId, position })
+        // Goals, 7m goals and stopped 7m shots reached the goal: fill in the goal matrix.
+        const goalCell =
+          type === 'goal' || type === 'penalty_goal' || type === 'penalty_saved'
+            ? pickWeighted(rng, GOAL_CELL_WEIGHTS)
+            : undefined
+        drafts.push({ teamId, playerId: player.id, type, ...pos, goalkeeperId, position, goalCell })
       }
     }
   }
@@ -356,6 +373,7 @@ export function buildDemo(date: string, now: number): DemoData {
     if (d.goalkeeperId) a.goalkeeperId = d.goalkeeperId
     if (d.position) a.position = d.position
     if (d.shooterId) a.shooterId = d.shooterId
+    if (d.goalCell !== undefined) a.goalCell = d.goalCell
     return a
   })
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { missingFields } from './history'
+import { keeperGrids } from './shots'
 import { buildDemo, DEMO_MATCH_ID } from './demo'
 import { hasPosition } from './court'
 import { KEEPER_FACED_TYPES } from './actions'
@@ -187,5 +188,32 @@ describe('demo: shows the newest features', () => {
     expect(todo.length).toBe(3)
     expect(todo.every((a) => a.matchId === 'demo-match')).toBe(true)
     expect(missingFields(todo[0]).length + missingFields(todo[1]).length + missingFields(todo[2]).length).toBe(3)
+  })
+})
+
+describe('demo: goal matrix', () => {
+  const d = buildDemo('2026-11-08', 1_000)
+  const reached = (t: string) => t === 'goal' || t === 'penalty_goal' || t === 'penalty_saved'
+
+  it('fills in the goal cell (0..8) for every shot that reached the goal, and for no other action', () => {
+    for (const a of d.actions) {
+      if (reached(a.type)) {
+        expect(Number.isInteger(a.goalCell)).toBe(true)
+        expect(a.goalCell!).toBeGreaterThanOrEqual(0)
+        expect(a.goalCell!).toBeLessThanOrEqual(8)
+      } else expect(a.goalCell).toBeUndefined()
+    }
+  })
+
+  it('shows every cell on the keeper pages, with goals in the cells', () => {
+    const grids = keeperGrids(d.actions)
+    expect(grids).toHaveLength(2)
+    for (const g of grids) {
+      expect(g.cells.every((c) => c.shots > 0)).toBe(true)
+      expect(g.cells.some((c) => c.goals > 0)).toBe(true)
+    }
+    // penalty_miss has no cell (it missed the goal): only those remain without one
+    const noCell = grids.reduce((n, g) => n + g.noCell, 0)
+    expect(noCell).toBe(d.actions.filter((a) => a.type === 'penalty_miss').length)
   })
 })
