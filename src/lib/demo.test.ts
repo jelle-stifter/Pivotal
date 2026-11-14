@@ -205,6 +205,18 @@ describe('demo: goal matrix', () => {
     }
   })
 
+  it('also fills in the bounce for those shots: on the floor between the shooter and the goal line', () => {
+    for (const a of d.actions) {
+      if (reached(a.type)) {
+        expect(a.bounce).toBeDefined()
+        expect(a.bounce!.x).toBeLessThanOrEqual(1)
+        expect(a.bounce!.x).toBeGreaterThanOrEqual(a.x!) // on the way from the shooter to the goal
+        expect(a.bounce!.y).toBeGreaterThanOrEqual(0)
+        expect(a.bounce!.y).toBeLessThanOrEqual(1)
+      } else expect(a.bounce).toBeUndefined()
+    }
+  })
+
   it('shows every cell on the keeper pages, with goals in the cells', () => {
     const grids = keeperGrids(d.actions)
     expect(grids).toHaveLength(2)

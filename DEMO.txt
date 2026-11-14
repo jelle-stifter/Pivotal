@@ -18,7 +18,7 @@ Wedstrijden > Demo laden (onderaan de pagina). Dat zet lokaal klaar:
 - Vier afgeronde wedstrijden (thuis en uit, een winst, gelijkspel en verlies),
   elk met teamkleuren (HVM blauw, tegenstander rood), ruim 150 acties met
   posities, timeouts en de top 3 penaltyschutters. Elk doelpunt, 7m-doelpunt
-  en gestopt 7m-schot heeft ook een vak in de doelmatrix (3x3); dat zie je
+  en gestopt 7m-schot heeft ook een vak in de doelmatrix (3x3) en een stuit; dat zie je
   bij Rapport > Doelvakken per keeper en op de schotkaarten.
 - In de nieuwste wedstrijd (31 - 27) staan 3 acties op "Nog invullen":
   twee doelpunten zonder positie en een zonder assist. Open Rapport en klik

@@ -8,6 +8,7 @@ import {
   type Team,
 } from '../types'
 import { normalizePosition } from './positions'
+import { cellGoalPoint } from './shots'
 
 /** Small deterministic PRNG so the demo is identical every time. */
 function mulberry32(seed: number) {
@@ -213,6 +214,7 @@ export function buildDemo(date: string, now: number): DemoData {
     position?: PositionCode
     shooterId?: string
     goalCell?: number
+    bounce?: { x: number; y: number }
   }
   const generate = (cfg: MatchCfg, index: number): Action[] => {
   rng = mulberry32(cfg.seed)
@@ -321,7 +323,18 @@ export function buildDemo(date: string, now: number): DemoData {
           type === 'goal' || type === 'penalty_goal' || type === 'penalty_saved'
             ? pickWeighted(rng, GOAL_CELL_WEIGHTS)
             : undefined
-        drafts.push({ teamId, playerId: player.id, type, ...pos, goalkeeperId, position, goalCell })
+        // The ball bounced on the floor in front of the goal, on its way from the
+        // shooter to the chosen cell (same frame as the shooting position).
+        let bounce: { x: number; y: number } | undefined
+        if (goalCell !== undefined) {
+          const end = cellGoalPoint(goalCell)
+          const t = 0.65 + rng() * 0.25
+          bounce = {
+            x: clamp01(pos.x + (end.x - pos.x) * t),
+            y: clamp01(pos.y + (end.y - pos.y) * t + gauss(rng) * 0.01),
+          }
+        }
+        drafts.push({ teamId, playerId: player.id, type, ...pos, goalkeeperId, position, goalCell, bounce })
       }
     }
   }
@@ -374,6 +387,7 @@ export function buildDemo(date: string, now: number): DemoData {
     if (d.position) a.position = d.position
     if (d.shooterId) a.shooterId = d.shooterId
     if (d.goalCell !== undefined) a.goalCell = d.goalCell
+    if (d.bounce) a.bounce = d.bounce
     return a
   })
 
