@@ -188,9 +188,14 @@ function LiveScreen({
   const [showPrep, setShowPrep] = useState(false)
   const [toast, setToast] = useState<{ text: string; error: boolean } | null>(null)
 
-  const clock = useMatchClock(match.clockMs, match.clockStartedAt, (patch) => {
-    void repo.updateMatch(match.id, patch)
-  })
+  const clock = useMatchClock(
+    match.clockMs,
+    match.clockStartedAt,
+    (patch) => {
+      void repo.updateMatch(match.id, patch)
+    },
+    match.finishedAt,
+  )
 
   // Keep the screen on while scoring.
   useWakeLock(!match.finishedAt)
@@ -220,12 +225,14 @@ function LiveScreen({
 
   // At 0:00 the clock stops by itself; the screen then shows 30:00 again.
   useEffect(() => {
-    if (clock.running && ended)
+    if (clock.running && ended) {
+      clock.release()
       void repo.updateMatch(match.id, {
         clockMs: periodStartMs(period) + HALF_MS,
         clockStartedAt: undefined,
       })
-  }, [clock.running, ended, match.id, period])
+    }
+  }, [clock, ended, match.id, period])
 
   const ownId = ownTeamId(match)
   const oppId = opponentTeamId(match)
@@ -273,6 +280,7 @@ function LiveScreen({
     if (finished) return
     const change = periodChange(period, delta, periods)
     if (!change) return
+    clock.release()
     await repo.updateMatch(match.id, {
       currentPeriod: change.period,
       clockMs: change.clockMs,
@@ -292,6 +300,7 @@ function LiveScreen({
       )
     )
       return
+    clock.release()
     await repo.updateMatch(match.id, {
       clockMs: Math.round(clock.get()),
       clockStartedAt: undefined,

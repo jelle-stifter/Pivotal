@@ -100,3 +100,20 @@ describe('2-minute suspensions', () => {
     expect(formatPenaltyTimes(p, 'clock')).toBe('uit 23:50, terug 21:50, nog 1:30')
   })
 })
+
+import { clockRestorePatch } from './clock'
+
+describe('clockRestorePatch (the clock only stops by hand)', () => {
+  const intent = { base: 1000, startedAt: 5000 }
+  it('restarts a clock that was stopped by something else (e.g. a sync overwrite)', () => {
+    expect(clockRestorePatch(intent, { clockMs: 0, clockStartedAt: undefined })).toEqual({
+      clockMs: 1000,
+      clockStartedAt: 5000,
+    })
+  })
+  it('does nothing after a manual stop (no intent), while running, or when finished', () => {
+    expect(clockRestorePatch(null, { clockMs: 0, clockStartedAt: undefined })).toBeNull()
+    expect(clockRestorePatch(intent, { clockMs: 0, clockStartedAt: 5000 })).toBeNull()
+    expect(clockRestorePatch(intent, { clockMs: 0, clockStartedAt: undefined, finishedAt: 9 })).toBeNull()
+  })
+})

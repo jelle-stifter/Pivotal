@@ -50,7 +50,7 @@ function isPermanent(e: unknown): boolean {
 }
 
 /** Sends the queued local changes. Throws on network problems (retry later). */
-async function flush(uid: string, memberships: Membership[]): Promise<number> {
+export async function flush(uid: string, memberships: Membership[]): Promise<number> {
   const entries = await db.outbox.toArray()
   if (entries.length === 0) return 0
 
@@ -168,8 +168,8 @@ async function flush(uid: string, memberships: Membership[]): Promise<number> {
     )
   })
 
-  // Deletions: children first. The server only deletes what the account may delete.
-  for (const table of ['actions', 'matches', 'players'] as const) {
+  // Deletions: children first, teams last. The server only deletes what the account may delete (RLS).
+  for (const table of ['actions', 'matches', 'players', 'teams'] as const) {
     await attempt(of(table, 'delete'), async (rows) => {
       await deleteIds(
         table,
@@ -177,8 +177,6 @@ async function flush(uid: string, memberships: Membership[]): Promise<number> {
       )
     })
   }
-  // Teams are never deleted online by this automatic sync.
-  done.push(...of('teams', 'delete'))
 
   // Clear what was sent, but keep rows that changed again in the meantime.
   await db.transaction('rw', db.outbox, async () => {

@@ -215,11 +215,23 @@ describe('repo', () => {
     await repo.updatePlayer(s.hp.id, { number: 7, name: 'Renamed' })
   })
 
-  it('refuses to delete a player with actions or a team in a match', async () => {
+  it('refuses to delete a player with actions', async () => {
     const s = await setup()
     await repo.logAction({ matchId: s.m.id, teamId: s.h.id, playerId: s.hp.id, type: 'shot' })
     await expect(repo.deletePlayer(s.hp.id)).rejects.toThrow()
-    await expect(repo.deleteTeam(s.h.id)).rejects.toThrow()
+  })
+
+  it('deleting a team removes its players, matches and actions (no orphans)', async () => {
+    const s = await setup()
+    await repo.logAction({ matchId: s.m.id, teamId: s.h.id, playerId: s.hp.id, type: 'shot' })
+    expect(await repo.teamUsage(s.h.id)).toEqual({ players: 2, matches: 1, actions: 1 })
+    await repo.deleteTeam(s.h.id)
+    expect(await db.teams.get(s.h.id)).toBeUndefined()
+    expect(await db.players.where('teamId').equals(s.h.id).count()).toBe(0)
+    expect(await db.matches.count()).toBe(0)
+    expect(await db.actions.count()).toBe(0)
+    // the other team stays
+    expect(await db.teams.get(s.a.id)).toBeDefined()
   })
 
   it('deleting a match removes its actions', async () => {

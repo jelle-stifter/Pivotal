@@ -87,12 +87,25 @@ export function createRepo(db: PivotalDB = defaultDb) {
     async updateTeam(id: string, patch: Partial<Omit<Team, 'id'>>) {
       await db.teams.update(id, patch)
     },
-    async deleteTeam(id: string) {
-      const used = await db.matches
+    /** What deleting this team removes: players, matches and their actions. */
+    async teamUsage(id: string) {
+      const matches = await db.matches
         .filter((m) => m.homeTeamId === id || m.awayTeamId === id)
-        .count()
-      if (used > 0) throw new Error('Team wordt gebruikt in een wedstrijd')
-      await db.transaction('rw', db.teams, db.players, async () => {
+        .toArray()
+      const players = await db.players.where('teamId').equals(id).count()
+      const actions = matches.length
+        ? await db.actions.where('matchId').anyOf(matches.map((m) => m.id)).count()
+        : 0
+      return { players, matches: matches.length, actions }
+    },
+    /** Deletes the team with its players, matches and actions (no orphans). */
+    async deleteTeam(id: string) {
+      await db.transaction('rw', db.teams, db.players, db.matches, db.actions, async () => {
+        const matchIds = (
+          await db.matches.filter((m) => m.homeTeamId === id || m.awayTeamId === id).toArray()
+        ).map((m) => m.id)
+        await db.actions.where('matchId').anyOf(matchIds).delete()
+        await db.matches.bulkDelete(matchIds)
         await db.players.where('teamId').equals(id).delete()
         await db.teams.delete(id)
       })

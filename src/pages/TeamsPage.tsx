@@ -160,11 +160,20 @@ function TeamDetail({
         <button
           className="btn btn-danger"
           onClick={() => {
-            if (confirm(`Team "${name}" en alle spelers verwijderen?`))
-              void run(async () => {
-                await repo.deleteTeam(teamId)
-                onDeleted()
-              })
+            void run(async () => {
+              const u = await repo.teamUsage(teamId)
+              const has = [
+                u.players > 0 && `${u.players} speler(s)`,
+                u.matches > 0 && `${u.matches} wedstrijd(en)`,
+                u.actions > 0 && `${u.actions} actie(s)`,
+              ].filter(Boolean)
+              const warning = has.length
+                ? `Dit team heeft ${has.join(', ')}. Alles wordt definitief verwijderd, ook online. Ben je zeker?`
+                : `Team "${name}" verwijderen? Ben je zeker?`
+              if (!confirm(warning)) return
+              await repo.deleteTeam(teamId)
+              onDeleted()
+            })
           }}
         >
           Team verwijderen

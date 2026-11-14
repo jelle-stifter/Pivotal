@@ -114,3 +114,24 @@ export function formatPenaltyTimes(
   }
   return `uit ${point(p.startMs)}, terug ${point(p.endMs)}, nog ${mmss(p.remainingMs)}`
 }
+
+/** What the coach last asked the clock to do: running since `startedAt`, on top of `base`. */
+export interface ClockIntent {
+  base: number
+  startedAt: number
+}
+
+/**
+ * The clock must only stop by hand (Stop, Timeout, end of half, end of match).
+ * If it is stopped by something else (e.g. an older copy from the server
+ * overwrote the match), this returns the patch that starts it again exactly
+ * where it would be now. Null = nothing to fix.
+ */
+export function clockRestorePatch(
+  intent: ClockIntent | null,
+  current: { clockMs: number; clockStartedAt: number | undefined; finishedAt?: number },
+): { clockMs: number; clockStartedAt: number } | null {
+  if (!intent || current.finishedAt) return null
+  if (current.clockStartedAt !== undefined && current.clockStartedAt !== null) return null
+  return { clockMs: intent.base, clockStartedAt: intent.startedAt }
+}
