@@ -140,6 +140,9 @@ export default function LivePage({ matchId }: { matchId: string }) {
   )
 }
 
+/** Action buttons are always grey; team colours are only used for names, dots and the score. */
+const BUTTON_GREY = '#52525b'
+
 /** A big touch button on the live screen (at least 44px, mostly much bigger). */
 function PadButton({
   children,
@@ -349,13 +352,13 @@ function LiveScreen({
               Fouten last
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <PadButton color="#4b5563" className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'bad_pass'))}>
+              <PadButton color={BUTTON_GREY} className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'bad_pass'))}>
                 Pass fout
               </PadButton>
-              <PadButton color="#4b5563" className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'technical_foul'))}>
+              <PadButton color={BUTTON_GREY} className="!text-xs sm:!text-sm" onClick={() => start(single('own', 'technical_foul'))}>
                 Technische fout
               </PadButton>
-              <PadButton color="#4b5563" className="col-span-2 !text-xs sm:!text-sm" onClick={() => start(single('own', 'interception'))}>
+              <PadButton color={BUTTON_GREY} className="col-span-2 !text-xs sm:!text-sm" onClick={() => start(single('own', 'interception'))}>
                 Onderschepping
               </PadButton>
             </div>
@@ -449,7 +452,7 @@ function LiveScreen({
           </button>
           {sideHeader(leftSide)}
           <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
-            {sideButtons(true, sideColor(leftSide))}
+            {sideButtons(true, BUTTON_GREY)}
           </div>
         </div>
 
@@ -552,7 +555,7 @@ function LiveScreen({
           </div>
           {sideHeader(rightSide)}
           <div className={`flex min-h-0 flex-1 flex-col ${buttonsLocked ? 'pointer-events-none opacity-60' : ''}`}>
-            {sideButtons(false, sideColor(rightSide))}
+            {sideButtons(false, BUTTON_GREY)}
           </div>
         </div>
 
