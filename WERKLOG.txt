@@ -1,0 +1,73 @@
+WERKLOG BACKHAND - stand van zaken 14 november 2026
+====================================================
+
+WAT IS ER AL GEDAAN (eerdere fases, uit de git-historie)
+- Fase 1: datamodel, migratie en logica voor de tablet-live-pagina.
+- Fase 2 en 3: nieuwe tablet-live-pagina met scorestromen (flows).
+- Fase 4: wedstrijdvoorbereiding, penaltyschutters, tegenstander en staf.
+- Fase 5 en 6: overzicht eigen team tegen tegenstander, fijnere heatmap,
+  spelerspagina, documentatie.
+
+WAT IS ER IN DEZE OPDRACHT GEDAAN (commits na "WIP voor opdracht")
+Groep 1 - fouten (commit 311ab89)
+- Klok (punt 7): een bewaker herstelt de klok als die stopt zonder dat jij op
+  Stop, Timeout, einde helft of einde wedstrijd drukte. De exacte oorzaak heb ik
+  niet kunnen bewijzen; de bewaker vangt elke oorzaak op. Test: clock.test.ts.
+- Teams verwijderen (punt 4): de sync wist teams nu ook online (voorheen werd
+  het verwijderen stilletjes weggegooid, daardoor kwam het team terug).
+  Verwijderen wist ook spelers, wedstrijden en acties, met de vraag "Ben je
+  zeker?" en de aantallen. Migratie supabase/007_team_delete.sql (door jou
+  gedraaid) laat de aanmaker een tegenstanderteam verwijderen.
+
+Groep 2 - labels, posities, voorbereiding (commit 20b2630)
+- Punt 1: Schietpositie, Stuit, Baltraject (knoppen, wis-knoppen, teksten).
+- Punt 2: halve veld gedraaid met het doel bovenaan; doelmatrix erboven.
+- Punt 3: posities als afkorting of volledige naam, hoofdletterongevoelig;
+  naam en afkorting worden beide opgeslagen; foutmelding bij onbekend.
+- Punt 5: positie per eigen speler in de voorbereiding.
+- Punt 6: zichtbare meldingen bij foute of dubbele tegenstanderinvoer.
+
+Groep 3 - live-pagina (commit 9fd4526)
+- Punt 8: "Overslaan, invullen na de wedstrijd" bij spelers en
+  "Weet ik niet, invullen na de wedstrijd" bij de keeper; markering
+  "Nog invullen"; blok "Nog invullen" in het rapport om aan te vullen.
+- Punt 9: geschiedenis-kolom links met klok en stand; aanpassen en verwijderen.
+- Punt 10: positie-afkortingen in het zijpaneel; tegenstanderkolom opnieuw
+  opgezet zoals de linkerkant (de box met teamnaam is weg).
+- Punt 11: Timeout per team (pauzeert de klok, teller klein ernaast, momenten
+  opgeslagen voor het rapport).
+- Punt 12: groter Stand-blok (scores tot 3 cijfers, namen van 3 letters).
+- Punt 13: bij Stop ook de schietende tegenstander (met overslaan en nieuw
+  nummer toevoegen).
+- Punt 15: de lopende stand staat bij de schotacties en bij "Nog invullen" in
+  het wedstrijdblad, en in de geschiedenis op het live-scherm.
+
+Groep 4 - kleuren (commit 2b9cecc)
+- Punt 14: per wedstrijd kies je de kleur van beide teams (palet met
+  hoofdkleuren en donkere/lichte varianten). Waarschuwing "Ben je zeker?" als
+  de kleuren op elkaar lijken. Gebruikt in stand, knoppen, zijpanelen,
+  scorekop, vergelijkingsbalken en scoreverloop. Tekst op de kleur is
+  automatisch zwart of wit (minimaal 4,5:1, getest voor het hele palet).
+
+GECONTROLEERD IN DE APP (browser, 1366x768)
+- Klok liep door tijdens het invoeren van een actie en bij het openen van de
+  Stop-dialoog; stopte alleen bij Timeout.
+- Doelpunt zonder speler en zonder keeper werd opgeslagen, stand klopte,
+  "Nog invullen" zichtbaar in geschiedenis en rapport; aanvullen via de
+  geschiedenis haalde de markering weg.
+- Rapport, statistiekenpagina en halve veld bekeken.
+
+WAT NU NOG AAN TE PASSEN / OPEN PUNTEN
+- Statistiekenpagina: samen met jou aanpassen (zoals afgesproken).
+- Doelmatrix: staat boven en in het midden van het doel, maar is breder dan
+  het kleine doel op het veld (3 m van 22 m). Precies even breed maken zou de
+  matrix te klein maken om aan te tikken. Zeg het als je dat anders wilt.
+- Klokbug: oorzaak niet bewezen; kijk bij het volgende gebruik of de klok nog
+  ooit stopt.
+- Overzichtspagina (HomePage): de scorekop daar gebruikt de teamkleuren nog niet.
+- Knop "Onderschepping" op het live-scherm is op 1366 breed net te smal voor de
+  tekst (stond al zo).
+- Oude wedstrijden zonder gekozen kleur krijgen grijs; de roster-import
+  weigert nu onbekende posities (was vrije tekst).
+- Nog niet op een echt tablet of met twee apparaten getest.
+- Nog niet gepusht of gedeployed.

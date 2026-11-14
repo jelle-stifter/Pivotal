@@ -55,7 +55,12 @@ Het live-scherm is gemaakt voor een tablet liggend langs de lijn: grote knoppen,
 - **Klok**: linksboven Start/Stop met een aftelklok van 30:00 naar 0:00. Altijd 2 helften. Op 0:00 stopt de klok en springt hij terug naar 30:00; ga met **+** naar de 2e helft (de klok blijft dan op 30:00 staan tot je op Start drukt). Met **−** ga je terug.
 - **Stand** (midden boven): korte teamnamen, Thuis/Uit en de score. Eronder het helftvakje en de lijst met lopende **2-minutenstraffen** (`#12 uit 6:10, terug 8:10, nog 1:30`). De straftijd loopt mee met de klok en staat stil als de klok stilstaat.
 - **HVM is altijd het eigen team.** Per wedstrijd stel je in of HVM thuis of uit speelt. Aan die kant staat de uitgebreide knoppenset (Doelpunt, 7 meter, Miss, Niet op doel, Fouten last: Pass fout / Technische fout / Onderschepping, en Block). De tegenstander heeft de simpele set (Doelpunt, Stop, Niet op doel, 7 meter).
-- **Onderaan**: Geel, 2 Min, Rood, Blauw. Rechtsboven bij de uitploeg **Ongedaan maken** (een penalty met rebound gaat in één keer terug), rechtsonder **Wedstrijd beëindigen**.
+- **Onderaan**: Geel, 2 Min, Rood, Blauw. **Ongedaan maken** staat onder het helftvakje (een penalty met rebound gaat in één keer terug), rechtsonder **Wedstrijd beëindigen**.
+- **Geschiedenis** (links): alle acties, nieuwste bovenaan, met klok en stand. Tik op een actie om speler, keeper, positie of type aan te passen, of om hem te verwijderen (de stand rekent mee).
+- **Timeout**: elk team heeft naast de teamnaam een knop. De klok stopt; jij drukt zelf op Start. Het aantal staat klein naast de knop; de momenten komen in het rapport.
+- **Overslaan**: bij elke keuze van een speler of keeper kun je kiezen voor "Overslaan, invullen na de wedstrijd". De actie wordt wel opgeslagen en krijgt de markering "Nog invullen"; in het wedstrijdrapport staat een blok "Nog invullen" waar je alles aanvult.
+- **Teamkleuren**: bij een nieuwe wedstrijd kies je per team een kleur. Die kleur wordt gebruikt op het live-scherm en in de statistieken. De tekst op de kleur is automatisch zwart of wit (minimaal 4,5:1 contrast).
+- De klok loopt alleen niet door na Stop, Timeout, het einde van een helft of het einde van de wedstrijd; een sync die de klok per ongeluk stopt wordt direct hersteld.
 - **Rechts**: topscorers van de tegenstander en van het eigen team, met doelpunten/schoten op doel, percentage en de positie waar de meeste doelpunten vandaan kwamen.
 - Elke knop start een korte reeks keuzes (spelers kies je op nummer of naam; een onbekend rugnummer van de tegenstander voeg je direct toe). Zie *Scorestromen* hieronder.
 

@@ -133,6 +133,21 @@ Wat is er nieuw
 - CSV: acties-export heeft extra kolommen (position_code, assist_by, fouled,
   fouler, staff_member, rebound); spelers-export heeft block en off_target.
 
+Aanpassingen na de eerste versie (november 2026)
+- Klok: een bewaker (useMatchClock + clockRestorePatch) zet een klok terug die
+  zonder Stop/Timeout stopt (bijv. door een sync). Oorzaak niet bewezen.
+- Teams verwijderen werkt ook online (syncEngine wist teams als laatste;
+  migratie supabase/007_team_delete.sql voor tegenstanderteams) en wist
+  spelers, wedstrijden en acties mee.
+- Posities: normalizePosition (afkorting of volledige naam, hoofdletterongevoelig);
+  Player.positionCode naast Player.position. Voorbereiding: positie per speler.
+- Tegenstanderinvoer: validateOpponentInput met duidelijke meldingen.
+- Live: overslaan ("Nog invullen", Action.todo), geschiedenis-kolom met bewerken,
+  Timeout per team (Match.timeouts), groter Stand-blok, schutter bij Stop
+  (Action.shooterId), teamkleuren (Match.homeColor/awayColor, src/lib/teamColors.ts).
+- Rapport: blok "Nog invullen" en de lopende stand bij elke schot-actie.
+- Rapport: halve veld met doel bovenaan; labels Schietpositie, Stuit, Baltraject.
+
 Keuzes die je moet weten
 - Posities en keepers zijn grote knoppen in plaats van een uitklaplijst
   (sneller op een tablet).
