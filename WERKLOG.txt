@@ -73,6 +73,10 @@ Groep 5 - aanpassingen na jouw feedback (commits 5c4f2c9, 30c2e9f, cf78a21, 3b22
   is vet bij een doelpunt; de gele regel toont wat nog ingevuld moet worden.
 - Rapport: de stand na elke actie staat nu altijd in een vaste kolom links
   (zelfde plek, vaste breedte), bij de schotkaarten en bij "Nog invullen".
+- Live: de rijen in de geschiedenis hebben weer de teamkleur (achtergrond,
+  dikke rand links en teamlabel).
+- Rapport: in "Doelpunten en schoten" en "Nog invullen" staat de laatste actie
+  bovenaan en de allereerste onderaan.
 
 GECONTROLEERD IN DE APP (browser, 1366x768)
 - Klok liep door tijdens het invoeren van een actie en bij het openen van de
