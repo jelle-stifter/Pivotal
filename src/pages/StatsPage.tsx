@@ -410,6 +410,7 @@ function StatsScreen({
             }))}
           labelHeader="Team"
           types={visibleTypes(tTotals.values())}
+          compact
         />
       </section>
 

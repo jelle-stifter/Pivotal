@@ -982,3 +982,88 @@ input:not([type='checkbox']):not([type='radio']) {
     content: '';
   }
 }
+
+/* Statistics tab: the player tables always fit the width (no horizontal scrolling).
+   Column headers are turned upright and the cells are compact. Screen only. */
+@media screen {
+  .stat-grid {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .stat-grid th:not(:first-child) {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+    height: 9.5rem;
+    min-width: 0;
+    padding: 0.4rem 0;
+    text-align: left;
+    font-size: 0.7rem;
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 600;
+  }
+  .stat-grid td:not(:first-child) {
+    min-width: 0;
+    padding: 0.35rem 0;
+    text-align: center;
+    font-size: 0.85rem;
+    overflow: hidden;
+  }
+  .stat-grid th:first-child {
+    width: 8.5rem;
+    min-width: 0;
+  }
+  .stat-grid td:first-child {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 0.85rem;
+  }
+  .stat-grid th.stat-pct,
+  .stat-grid td.stat-pct {
+    width: 2.9rem;
+  }
+  .stat-grid .stat-name-btn {
+    min-height: 2rem;
+  }
+}
+@media screen and (max-width: 640px) {
+  /* Use the card padding too, so the 15 columns fit on a phone. */
+  .overflow-x-auto:has(> .stat-grid) {
+    margin-left: -0.75rem;
+    margin-right: -0.75rem;
+  }
+  .stat-grid th:first-child {
+    width: 4.8rem;
+  }
+  .stat-grid td:first-child {
+    font-size: 0.7rem;
+    line-height: 1.15;
+  }
+  .stat-grid td:not(:first-child) {
+    font-size: 0.68rem;
+  }
+  .stat-grid th.stat-pct,
+  .stat-grid td.stat-pct {
+    width: 2.2rem;
+  }
+  .stat-grid .stat-name-btn {
+    min-height: 1.8rem;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .stat-grid th:first-child {
+    width: 4rem;
+  }
+  .stat-grid td:first-child {
+    font-size: 0.66rem;
+  }
+  .stat-grid td:not(:first-child) {
+    font-size: 0.62rem;
+  }
+  .stat-grid th.stat-pct,
+  .stat-grid td.stat-pct {
+    width: 2rem;
+  }
+}

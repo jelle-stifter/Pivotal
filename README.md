@@ -49,7 +49,7 @@ De app werkt daarna volledig **offline**. Nieuwe versies worden automatisch opge
 4. **Statistieken**: filter op team, speler, actie en periode. Exporteer naar CSV.
 
 ### Statistieken en rapport
-- **Statistieken**: twee tabellen, *Veldspelers* (16 kolommen) en *Keepers* (8 kolommen). Een lege cel betekent: geen gegevens (nooit "0"). Klik op een naam of waarde om de rij te markeren (kleur, vet en ▶); nog eens klikken heft het op. De naamkolom blijft staan bij horizontaal scrollen.
+- **Statistieken**: twee tabellen, *Veldspelers* (16 kolommen) en *Keepers* (8 kolommen). Een lege cel betekent: geen gegevens (nooit "0"). Klik op een naam of waarde om de rij te markeren (kleur, vet en ▶); nog eens klikken heft het op. Alle tabellen passen in de breedte, zonder horizontaal scrollen (kolomkoppen staan rechtop; de teamtabel heeft de teams als kolommen).
 - Schotpercentage veldspelers = totaal doelpunten / totaal schoten op doel (doelpunten + missers + 7m-doelpunt + 7m-stop + 7m niet op doel). Keepers = totaal stops / totaal schoten op doel.
 - **Heatmap**: elk team staat op zijn eigen helft (het team dat naar rechts aanvalt rechts), met teamnaam bij het doel en een kleurverloop in de teamkleur (licht = weinig, donker = veel). Zonder actiefilter telt alleen schoten en doelpunten.
 - **Rapport** (knop Rapport bij de wedstrijd): voorkant = wedstrijd + stand, vergelijking, scoreverloop, keepers, per team de top 3 en de veldspelerstabel; achterkant = heatmap. **Afdrukken** geeft 2 A4-pagina's (staand). Onder het rapport (alleen op scherm) staan Nog invullen, doelvakken, notities en schotkaarten.

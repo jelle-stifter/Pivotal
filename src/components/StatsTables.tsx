@@ -27,6 +27,7 @@ export function TotalsTable({
   showTeam = false,
   showTotal = false,
   showMatches = false,
+  compact = false,
 }: {
   rows: TotalsRow[]
   labelHeader: string
@@ -34,9 +35,45 @@ export function TotalsTable({
   showTeam?: boolean
   showTotal?: boolean
   showMatches?: boolean
+  /** Teams as columns and the statistics as rows: never needs horizontal scrolling. */
+  compact?: boolean
 }) {
   if (rows.length === 0)
     return <p className="py-4 text-slate-500">Geen gegevens.</p>
+
+  if (compact) {
+    const lines: { key: string; label: string; value: (t: Totals) => string }[] = [
+      ...types.map((type) => ({ key: type, label: ACTION_META[type].label, value: (t: Totals) => String(t[type]) })),
+      { key: 'goals', label: 'Goals tot.', value: (t: Totals) => String(totalGoals(t)) },
+      { key: 'pct', label: 'Schot%', value: (t: Totals) => formatPercentage(shotPercentage(t)) },
+    ]
+    return (
+      <table className="table">
+        <thead>
+          <tr>
+            <th />
+            {rows.map((r) => (
+              <th key={r.key} className="text-right">
+                {r.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((l) => (
+            <tr key={l.key}>
+              <td className="font-semibold">{l.label}</td>
+              {rows.map((r) => (
+                <td key={r.key} className="text-right tabular-nums">
+                  {l.value(r.totals)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )
+  }
 
   const perMatch = (t: Totals, matches?: number) =>
     matches ? (totalGoals(t) / matches).toLocaleString('nl-NL', { maximumFractionDigits: 1 }) : ''

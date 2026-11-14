@@ -60,7 +60,7 @@ export function FieldPlayersTable({ groups, label = 'Veldspelers' }: { groups: F
           <tr>
             <th>Naam</th>
             {header.map((h) => (
-              <th key={h} className="text-right">
+              <th key={h} className={h === 'Schotpercentage' ? 'text-right stat-pct' : 'text-right'}>
                 {h}
               </th>
             ))}
@@ -118,7 +118,7 @@ function GroupRows({
         return (
           <SelectableRow key={r.key} id={r.key} label={r.label} selected={selected === r.key} toggle={toggle}>
             {cells.map(([cell, suffix], i) => (
-              <td key={i} className={num}>
+              <td key={i} className={suffix ? `${num} stat-pct` : num}>
                 {showCell(cell, suffix)}
               </td>
             ))}
@@ -190,7 +190,7 @@ export function KeepersTable({ rows, label = 'Keepers' }: { rows: KeeperRowData[
           <tr>
             <th>Naam</th>
             {header.map((h) => (
-              <th key={h} className="text-right">
+              <th key={h} className={h === 'Schotpercentage' ? 'text-right stat-pct' : 'text-right'}>
                 {h}
               </th>
             ))}
@@ -211,7 +211,7 @@ export function KeepersTable({ rows, label = 'Keepers' }: { rows: KeeperRowData[
             return (
               <SelectableRow key={r.key} id={r.key} label={r.label} selected={selected === r.key} toggle={toggle}>
                 {cells.map(([cell, suffix], i) => (
-                  <td key={i} className={num}>
+                  <td key={i} className={suffix ? `${num} stat-pct` : num}>
                     {showCell(cell, suffix)}
                   </td>
                 ))}
