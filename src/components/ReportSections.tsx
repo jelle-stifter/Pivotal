@@ -26,7 +26,9 @@ export function TodoSection({
 }) {
   const [editing, setEditing] = useState<string | null>(null)
   const scores = runningScores(actions, match.homeTeamId, match.awayTeamId)
-  const todo = byTime(actions).filter((a) => missingFields(a).length > 0)
+  const todo = byTime(actions)
+    .filter((a) => missingFields(a).length > 0)
+    .reverse()
   if (todo.length === 0) return null
   const who = (a: Action) => {
     const p = players.find((x) => x.id === a.playerId)
@@ -116,7 +118,8 @@ export function ShotsSection({
     .filter(isShot)
     .filter((a) => team === 'all' || a.teamId === team)
     .filter((a) => !onlyGoals || a.type === 'goal' || a.type === 'penalty_goal')
-    .sort((a, b) => a.matchClockMs - b.matchClockMs || a.createdAt - b.createdAt)
+    // Newest action on top, the very first action at the bottom.
+    .sort((a, b) => b.matchClockMs - a.matchClockMs || b.createdAt - a.createdAt)
   return (
     <section className="space-y-3" aria-label="Doelpunten en schoten">
       <div className="flex flex-wrap items-center justify-between gap-3">
